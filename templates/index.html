@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LD Detector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Added dyslexia-friendly font configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'dyslexic': ['OpenDyslexic', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<!-- Enhanced body with better background and typography -->
+<body class="font-sans bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-all duration-300 min-h-screen">
+  <div class="max-w-6xl mx-auto p-6 space-y-8">
+    <!-- Modernized header with theme toggle -->
+    <header class="flex justify-between items-center bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <div>
+        <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Intelligent LD Detection</h1>
+        <p class="text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">Advanced screening for learning difficulties</p>
+      </div>
+      <button onclick="toggleTheme()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-blue-500/20" aria-label="Toggle theme">
+        <span class="text-xl">🌗</span>
+      </button>
+    </header>
+
+    <!-- Enhanced user authentication section -->
+    {% if session.get('user_name') %}
+      <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-6">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+              <span class="text-white font-semibold">{{ session['user_name'][0].upper() }}</span>
+            </div>
+            <div>
+              <span class="font-semibold text-green-800 dark:text-green-200">Welcome back, {{ session['user_name'] }}!</span>
+              <p class="text-sm text-green-600 dark:text-green-300">Ready to continue your assessment</p>
+            </div>
+          </div>
+          <a href="{{ url_for('logout') }}" class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-300 focus:ring-4 focus:ring-red-500/20 font-medium">
+            ✕ Logout
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+        <div class="text-center space-y-4">
+          <h2 class="text-xl font-semibold">Get Started Today</h2>
+          <p class="text-gray-600 dark:text-gray-300 leading-relaxed">Create an account or sign in to access our comprehensive learning difficulty screening tools.</p>
+          <div class="flex gap-4 justify-center">
+            <a href="{{ url_for('login') }}" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300 focus:ring-4 focus:ring-blue-500/20 font-medium">
+              🔑 Login
+            </a>
+            <a href="{{ url_for('signup') }}" class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300 focus:ring-4 focus:ring-green-500/20 font-medium">
+              ✨ Sign Up
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Enhanced description section -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+      <div class="max-w-4xl mx-auto text-center space-y-6">
+        <h2 class="text-2xl font-bold">Professional Learning Difficulty Screening</h2>
+        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+          Our platform provides evidence-based screening tools for dyslexia, dyscalculia, and memory difficulties. 
+          These assessments help identify potential learning challenges early and guide appropriate support strategies.
+        </p>
+        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+          <p class="text-amber-800 dark:text-amber-200 font-medium">
+            ⚠️ Important: These are screening tools, not diagnostic tests. Professional evaluation is recommended for definitive diagnosis.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modernized test cards grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/test/dyslexia" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600">
+        <div class="text-center space-y-4">
+          <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+            <span class="text-3xl">🔤</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">Dyslexia Test</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Reading and language processing assessment</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="/test/dyscalculia" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600">
+        <div class="text-center space-y-4">
+          <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+            <span class="text-3xl">➗</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">Dyscalculia Test</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Mathematical reasoning and number sense</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="/test/memory" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600">
+        <div class="text-center space-y-4">
+          <div class="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+            <span class="text-3xl">🖼️</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">Memory Test</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Visual memory and recall assessment</p>
+          </div>
+        </div>
+      </a>
+
+      <a href="/admin" class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600">
+        <div class="text-center space-y-4">
+          <div class="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+            <span class="text-3xl">📊</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-gray-900 dark:text-white">Admin Dashboard</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Manage results and user data</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+<!-- Enhanced theme toggle script -->
+<script>
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  localStorage.setItem('theme', document.documentElement.dataset.theme);
+}
+
+// Load saved theme
+if (localStorage.getItem('theme') === 'dark') {
+  document.documentElement.classList.add('dark');
+  document.documentElement.dataset.theme = 'dark';
+}
+</script>
+</body>
+</html>
