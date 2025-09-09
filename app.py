@@ -80,7 +80,7 @@ def login():
             session['user_id'] = user.id
             session['user_name'] = user.name
             flash('Logged in successfully!')
-            return redirect(url_for('landing'))
+            return redirect(url_for('index'))
         flash('Invalid email or password.')
     return render_template('login.html')
 
@@ -88,31 +88,28 @@ def login():
 def logout():
     session.clear()
     flash('Logged out.')
-    return redirect(url_for('landing'))
+    return redirect(url_for('index'))
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', db=db, User=User)
 
 @app.route('/landing')
 def landing():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user = db.session.get(User, session['user_id'])
-    if not user.completed_get_to_know_you:
-        return render_template('get_to_know_you.html', user=user)
-    return render_template('tests_landing.html', user=user)
+    return redirect(url_for('index'))
 
 @app.route('/get-to-know-you', methods=['GET', 'POST'])
 def get_to_know_you():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
+    if user.completed_get_to_know_you:
+        return redirect(url_for('index'))
     if request.method == 'POST':
         # Process answers here (for now just mark as completed)
         user.completed_get_to_know_you = True
         db.session.commit()
-        return redirect(url_for('landing'))
+        return redirect(url_for('index'))
     return render_template('get_to_know_you.html', user=user)
 
 @app.route('/test/dyslexia', methods=['GET', 'POST'])
@@ -121,7 +118,7 @@ def test_dyslexia():
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
     if not user.completed_get_to_know_you:
-        return redirect(url_for('landing'))
+        return redirect(url_for('index'))
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -137,7 +134,7 @@ def test_dyscalculia():
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
     if not user.completed_get_to_know_you:
-        return redirect(url_for('landing'))
+        return redirect(url_for('index'))
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -153,7 +150,7 @@ def test_memory():
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
     if not user.completed_get_to_know_you:
-        return redirect(url_for('landing'))
+        return redirect(url_for('index'))
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -205,7 +202,7 @@ def admin_dashboard():
         return redirect(url_for('login'))
     user = db.session.get(User, session['user_id'])
     if user.role not in ['admin', 'superuser']:
-        return redirect(url_for('landing'))
+        return redirect(url_for('index'))
     # Filters: email, test_type
     email = request.args.get('email', '').strip()
     test_type = request.args.get('test_type', '').strip()
