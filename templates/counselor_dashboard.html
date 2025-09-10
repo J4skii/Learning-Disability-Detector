@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Counselor Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <h1>Welcome, Counselor {{ user.name }}</h1>
+    <nav>
+        <a href="{{ url_for('landing') }}">Home</a> |
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </nav>
+    <h2>Student List</h2>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Assessments</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.name }}</td>
+                <td>{{ student.email }}</td>
+                <td><a href="{{ url_for('student_dashboard', user_id=student.id) }}">View Profile</a></td>
+                <td>
+                    <!-- Placeholder for actions like messaging or notes -->
+                    <a href="{{ url_for('student_dashboard', user_id=student.id) }}">Details</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No students found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

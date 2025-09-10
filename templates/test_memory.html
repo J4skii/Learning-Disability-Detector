@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memory Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Added dyslexia-friendly font configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'dyslexia': ['OpenDyslexic', 'Comic Sans MS', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<!-- Added modern gradient background and dyslexia-friendly font -->
+<body class="font-dyslexia bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 min-h-screen text-gray-900 dark:text-white transition-all duration-300">
+  <div class="max-w-4xl mx-auto p-6">
+    <!-- Enhanced header with better spacing and modern styling -->
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">🖼️ Image Memory Test</h1>
+        <p class="text-gray-600 dark:text-gray-300">Test your visual memory skills</p>
+      </div>
+      <button onclick="toggleTheme()" 
+              class="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              aria-label="Toggle theme">
+        <span class="text-lg">🌗</span>
+      </button>
+    </div>
+
+    <!-- Modernized form with gradient background and rounded corners -->
+    <form method="POST" class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
+      <div id="preview" class="mb-6">
+        <!-- Enhanced countdown styling -->
+        <div class="text-center mb-6">
+          <p class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Memorize these images carefully
+          </p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            They will disappear in <span id="count" class="font-bold text-purple-600 dark:text-purple-400 text-xl">5</span> seconds
+          </p>
+        </div>
+        
+        <!-- Improved image grid with better spacing and hover effects -->
+        <div class="grid grid-cols-2 gap-6">
+          <div class="group">
+            <img src="{{ url_for('static', filename='images/apple.jpg') }}" 
+                 class="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-gray-600"
+                 alt="Apple image for memory test">
+          </div>
+          <div class="group">
+            <img src="{{ url_for('static', filename='images/book.jpg') }}" 
+                 class="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-gray-600"
+                 alt="Book image for memory test">
+          </div>
+          <div class="group">
+            <img src="{{ url_for('static', filename='images/tiger.jpg') }}" 
+                 class="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-gray-600"
+                 alt="Tiger image for memory test">
+          </div>
+          <div class="group">
+            <img src="{{ url_for('static', filename='images/spoon.jpg') }}" 
+                 class="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 border-2 border-gray-200 dark:border-gray-600"
+                 alt="Spoon image for memory test">
+          </div>
+        </div>
+      </div>
+
+      <div id="recall" style="display:none;">
+        <!-- Enhanced recall section with better typography -->
+        <div class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Recall Phase</h2>
+          <p class="text-gray-600 dark:text-gray-400">Select the images you remember seeing:</p>
+        </div>
+        
+        <!-- Modernized checkbox styling with better accessibility -->
+        <div class="grid grid-cols-2 gap-4 mb-8">
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Apple" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🍎 Apple</span>
+          </label>
+          
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Banana" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🍌 Banana</span>
+          </label>
+          
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Spoon" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🥄 Spoon</span>
+          </label>
+          
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Car" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🚗 Car</span>
+          </label>
+          
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Book" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">📚 Book</span>
+          </label>
+          
+          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
+            <input type="checkbox" name="recall" value="Tiger" 
+                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
+            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🐅 Tiger</span>
+          </label>
+        </div>
+        
+        <!-- Enhanced submit button with modern styling -->
+        <div class="text-center">
+          <button type="submit" 
+                  class="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
+            Submit Memory Test
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+<script>
+let count = 5;
+const counterEl = document.getElementById('count');
+const interval = setInterval(() => {
+  count -= 1;
+  counterEl.textContent = count;
+  if (count <= 0) {
+    clearInterval(interval);
+    document.getElementById('preview').style.display = 'none';
+    document.getElementById('recall').style.display = 'block';
+  }
+}, 1000);
+
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+</script>
+</body>
+</html>
