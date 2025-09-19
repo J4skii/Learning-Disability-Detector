@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Student Profile - {{ student.name }} - LD Detector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-sans bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-all duration-300 min-h-screen">
+  <div class="max-w-4xl mx-auto p-6 space-y-8">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+            <span class="text-2xl">👨‍🎓</span>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">Student Profile</h1>
+            <p class="text-gray-600 dark:text-gray-300">Viewing profile for {{ student.name }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="{{ url_for('counselor_dashboard') }}" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-all duration-300">← Back to Dashboard</a>
+          <a href="{{ url_for('logout') }}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all duration-300">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Student Information -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <h2 class="text-2xl font-semibold mb-6">Student Information</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ student.name }}</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+            <p class="text-lg text-gray-900 dark:text-white">{{ student.email }}</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Age</label>
+            <p class="text-lg text-gray-900 dark:text-white">{{ student.age or 'Not specified' }}</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
+            <p class="text-lg text-gray-900 dark:text-white">{{ student.gender or 'Not specified' }}</p>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
+            <p class="text-lg text-gray-900 dark:text-white">{{ student.course or 'Not specified' }}</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+            <p class="text-lg text-gray-900 dark:text-white">{{ student.year or 'Not specified' }}</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Created</label>
+            <p class="text-lg text-gray-900 dark:text-white">
+              {% if student.created_at %}
+                {{ student.created_at.strftime('%B %d, %Y') }}
+              {% else %}
+                Not available
+              {% endif %}
+            </p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Login</label>
+            <p class="text-lg text-gray-900 dark:text-white">
+              {% if student.last_login %}
+                {{ student.last_login.strftime('%B %d, %Y at %I:%M %p') }}
+              {% else %}
+                Never
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Get to Know You Assessment -->
+    {% if student.completed_get_to_know_you %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <h2 class="text-2xl font-semibold mb-6">Get to Know You Assessment</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+          <h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Learning Style</h3>
+          <p class="text-blue-800 dark:text-blue-200">{{ student.g2k_learning_style or 'Not specified' }}</p>
+        </div>
+        
+        <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl">
+          <h3 class="font-semibold text-green-900 dark:text-green-100 mb-2">Diagnosed Difficulties</h3>
+          <p class="text-green-800 dark:text-green-200">{{ student.g2k_diagnosed_difficulties or 'None reported' }}</p>
+        </div>
+        
+        <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
+          <h3 class="font-semibold text-purple-900 dark:text-purple-100 mb-2">Age Group</h3>
+          <p class="text-purple-800 dark:text-purple-200">{{ student.g2k_age_group or 'Not specified' }}</p>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl shadow-lg p-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-2xl flex items-center justify-center">
+          <span class="text-2xl">⚠️</span>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-yellow-900 dark:text-yellow-100">Get to Know You Assessment Not Completed</h3>
+          <p class="text-yellow-800 dark:text-yellow-200">This student has not yet completed the initial assessment.</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Test Results -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <h2 class="text-2xl font-semibold mb-6">Recent Test Results</h2>
+      
+      {% if results %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Test Type</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Score</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Date</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              {% for result in results %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ result.test_type }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ result.score }}/100</td>
+                <td class="px-6 py-4 text-sm">
+                  {% if result.flag %}
+                    <span class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full text-xs font-medium">
+                      Needs Attention
+                    </span>
+                  {% else %}
+                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-xs font-medium">
+                      Normal
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                  {% if result.timestamp %}
+                    {{ result.timestamp.strftime('%B %d, %Y') }}
+                  {% else %}
+                    Not available
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-12 text-center">
+          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span class="text-2xl text-gray-400">📊</span>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Test Results</h3>
+          <p class="text-gray-600 dark:text-gray-300">This student has not completed any assessments yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      localStorage.setItem('theme', document.documentElement.dataset.theme);
+    }
+
+    // Load saved theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.dataset.theme = 'dark';
+    }
+  </script>
+</body>
+</html>
