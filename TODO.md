@@ -1,20 +1,23 @@
-# TODO: Add Admin and Counselor Roles
+# Counselor Dashboard Development TODO
 
-## Completed
-- [ ] Analyze current codebase
-- [ ] Create plan
+## 1. Update counselor_dashboard.html
+- [x] Add total student count display in header
+- [x] Add gender column to students table
+- [x] Add get-to-know-you column to students table
+- [x] Implement add modal for programs/assessments with confirmation prompts
+- [x] Implement delete confirmation modal
+- [x] Add JavaScript for confirmation dialogs
 
-## In Progress
-- [ ] Update models.py: Add support for counselor role and hardcoded users
-- [ ] Update app.py: Add decorators, modify login, add routes
-- [ ] Create counselor_dashboard.html template
-- [ ] Update admin_dashboard.html with more features
-- [ ] Test role-based access
+## 2. Update app.py
+- [ ] Add route for adding new programs
+- [ ] Add route for deleting programs
+- [ ] Add route for adding new assessments
+- [ ] Add route for deleting assessments
+- [ ] Ensure counselor_required decorator on all new routes
 
-## Pending
-- [ ] Add manage users functionality
-- [ ] Add manage test content/programs
-- [ ] Add report generation
-- [ ] Add high-risk student identification
-- [ ] Configure system settings
-- [ ] Anonymize data features
+## 3. Testing
+- [x] Test counselor login redirects to dashboard
+- [x] Verify total student count displays correctly
+- [x] Check student details show gender and get-to-know-you
+- [x] Test add new material functionality
+- [x] Test delete material with confirmation

@@ -41,6 +41,43 @@ class Result(db.Model):
     message = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Test(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)  # e.g., 'Comprehension', 'Memory Test', etc.
+    description = db.Column(db.Text, nullable=True)
+    difficulty_level = db.Column(db.String(20), default='medium')  # easy, medium, hard
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Remedial(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_id = db.Column(db.Integer, db.ForeignKey('test.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    content = db.Column(db.Text, nullable=True)  # Text or URL to resources
+    function = db.Column(db.Text, nullable=True)  # Description of remedial purpose
+    difficulty_level = db.Column(db.String(20), default='medium')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class User_Test_Attempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    test_id = db.Column(db.Integer, db.ForeignKey('test.id'), nullable=False)
+    attempt_date = db.Column(db.DateTime, default=datetime.utcnow)
+    score = db.Column(db.Integer, nullable=True)
+    flag = db.Column(db.Boolean, default=False)  # Indicates dyslexia
+    message = db.Column(db.String(255), nullable=True)
+    duration = db.Column(db.Integer, nullable=True)  # In seconds
+
+class User_Remedial_Progress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    remedial_id = db.Column(db.Integer, db.ForeignKey('remedial.id'), nullable=False)
+    status = db.Column(db.String(20), default='started')  # started, in_progress, completed
+    progress_percentage = db.Column(db.Integer, default=0)  # 0-100
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)  # Counselor feedback
+
 def save_result(name, email, test_type, score, flag, message):
     r = Result(name=name, email=email, test_type=test_type, score=score, flag=bool(flag), message=message)
     db.session.add(r)
@@ -65,6 +102,80 @@ def export_results_to_csv(email=None, test_type=None):
         for r in results:
             writer.writerow([r.name, r.email, r.test_type, r.score, 'Yes' if r.flag else 'No', r.message, r.timestamp])
     return path
+
+def save_attempt(user_id, test_id, score, flag, message, duration=None):
+    attempt = User_Test_Attempt(
+        user_id=user_id,
+        test_id=test_id,
+        score=score,
+        flag=flag,
+        message=message,
+        duration=duration
+    )
+    db.session.add(attempt)
+    db.session.commit()
+
+def get_user_attempts(user_id=None, test_id=None):
+    q = User_Test_Attempt.query.order_by(User_Test_Attempt.attempt_date.desc())
+    if user_id:
+        q = q.filter_by(user_id=user_id)
+    if test_id:
+        q = q.filter_by(test_id=test_id)
+    return q.all()
+
+def save_remedial_progress(user_id, remedial_id, status, progress_percentage, notes=None):
+    progress = User_Remedial_Progress.query.filter_by(user_id=user_id, remedial_id=remedial_id).first()
+    if not progress:
+        progress = User_Remedial_Progress(user_id=user_id, remedial_id=remedial_id)
+        db.session.add(progress)
+    progress.status = status
+    progress.progress_percentage = progress_percentage
+    if notes:
+        progress.notes = notes
+    if status == 'completed':
+        progress.completed_at = datetime.utcnow()
+    db.session.commit()
+
+def get_user_remedial_progress(user_id=None, remedial_id=None):
+    q = User_Remedial_Progress.query.order_by(User_Remedial_Progress.started_at.desc())
+    if user_id:
+        q = q.filter_by(user_id=user_id)
+    if remedial_id:
+        q = q.filter_by(remedial_id=remedial_id)
+    return q.all()
+
+def create_sample_tests_and_remedials():
+    """Create sample tests and remedials if they don't exist."""
+    # Tests
+    tests_data = [
+        {'name': 'Comprehension', 'description': 'Reading comprehension test', 'difficulty_level': 'medium'},
+        {'name': 'Memory Test', 'description': 'Short-term memory recall test', 'difficulty_level': 'medium'},
+        {'name': 'Phonetics', 'description': 'Sound-letter mapping test', 'difficulty_level': 'easy'},
+        {'name': 'Flash Card Test', 'description': 'Quick recognition and spelling test', 'difficulty_level': 'hard'}
+    ]
+    for data in tests_data:
+        if not Test.query.filter_by(name=data['name']).first():
+            test = Test(**data)
+            db.session.add(test)
+    db.session.commit()
+
+    # Remedials (assuming tests are created)
+    comprehension = Test.query.filter_by(name='Comprehension').first()
+    memory = Test.query.filter_by(name='Memory Test').first()
+    phonetics = Test.query.filter_by(name='Phonetics').first()
+    flashcards = Test.query.filter_by(name='Flash Card Test').first()
+
+    remedials_data = [
+        {'test_id': comprehension.id if comprehension else 1, 'name': 'Guided Reading Exercise', 'description': 'Interactive passages with questions', 'function': 'Build reading comprehension through guided exercises'},
+        {'test_id': memory.id if memory else 2, 'name': 'Memory Recall Game', 'description': 'Word sequence recall drills', 'function': 'Strengthen short-term memory with games'},
+        {'test_id': phonetics.id if phonetics else 3, 'name': 'Sound Mapping Drill', 'description': 'Pronunciation and letter-sound practice', 'function': 'Enhance phonetic awareness'},
+        {'test_id': flashcards.id if flashcards else 4, 'name': 'Spelling Flash Cards', 'description': 'Timed word recognition', 'function': 'Improve spelling and quick recognition'}
+    ]
+    for data in remedials_data:
+        if not Remedial.query.filter_by(name=data['name']).first():
+            remedial = Remedial(**data)
+            db.session.add(remedial)
+    db.session.commit()
 
 def create_hardcoded_users():
     """Create hardcoded admin and counselor users if they don't exist."""

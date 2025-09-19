@@ -5,11 +5,12 @@ from io import BytesIO
 # Third-party imports
 from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash
 from flask_mail import Mail, Message
+from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy.exc import SQLAlchemyError
 
 # Local imports
-from models import db, User, save_result, get_filtered_results, export_results_to_csv, create_hardcoded_users
+from models import db, User, Test, Remedial, save_result, get_filtered_results, export_results_to_csv, create_hardcoded_users
 from ld_logic import evaluate_dyslexia, evaluate_dyscalculia, evaluate_memory
 
 # Initialize Flask app
@@ -33,6 +34,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.co
 # Initialize extensions
 mail = Mail(app)
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Initialize serializer
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -547,6 +549,57 @@ LD Detector Team
 
     return render_template('forgot_password.html')
 
+@app.route('/test/flash_cards', methods=['GET', 'POST'])
+@login_required
+def test_flash_cards():
+    try:
+        user = db.session.get(User, session['user_id'])
+        if not user:
+            session.clear()
+            flash('Session expired. Please log in again.')
+            return redirect(url_for('login'))
+
+        if not user.completed_get_to_know_you:
+            flash('Please complete the "Get to Know You" assessment first.')
+            return redirect(url_for('landing'))
+
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip().lower()
+            answers = [request.form.get(f'q{i}') for i in range(1,6)]
+
+            # Validate inputs
+            if not name or not email:
+                flash('Name and email are required.')
+                return redirect(url_for('test_flash_cards'))
+
+            if not all(answers):
+                flash('Please answer all questions.')
+                return redirect(url_for('test_flash_cards'))
+
+            # Simple evaluation for flash cards (count correct answers)
+            correct_answers = ['cat', 'apple', 'book', 'house', 'sun']
+            score = sum(1 for user_ans, correct_ans in zip(answers, correct_answers)
+                       if user_ans and user_ans.lower().strip() == correct_ans.lower())
+
+            flag = score < 3  # Flag if less than 3 correct
+            message = f"You correctly identified {score} out of 5 flash card items."
+
+            save_result(name, email, 'Flash Cards', score, flag, message)
+            result = {
+                'type': 'Flash Cards',
+                'score': score,
+                'flag': flag,
+                'message': message
+            }
+            return render_template('results.html', result=result)
+
+        return render_template('test_flash_cards.html')
+    except Exception as e:
+        print(f"Flash cards test error: {e}")
+        flash('An error occurred during the test. Please try again.')
+        return redirect(url_for('landing'))
+
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     try:
@@ -605,18 +658,139 @@ def admin_dashboard():
         flash('An error occurred loading the admin dashboard.')
         return redirect(url_for('landing'))
 
+@app.route('/assessments')
+@login_required
+def assessments():
+    try:
+        user = db.session.get(User, session['user_id'])
+        return render_template('assessments.html', user=user)
+    except Exception as e:
+        print(f"Assessments page error: {e}")
+        flash('An error occurred loading the assessments page.')
+        return redirect(url_for('index'))
+
 @app.route('/counselor')
 @counselor_required
 def counselor_dashboard():
     try:
         user = db.session.get(User, session['user_id'])
         # Get all students
-        students = User.query.filter_by(role='student').all()
-        return render_template('counselor_dashboard.html', students=students, user=user)
+        search_query = request.args.get('search', '').strip().lower()
+        if search_query:
+            students = User.query.filter(
+                User.role == 'student',
+                (User.name.ilike(f'%{search_query}%')) | (User.email.ilike(f'%{search_query}%'))
+            ).all()
+        else:
+            students = User.query.filter_by(role='student').all()
+
+        # Get all programs (remedials) and assessments (tests)
+        programs = Remedial.query.all()
+        assessments = Test.query.all()
+
+        return render_template('counselor_dashboard.html', students=students, programs=programs, assessments=assessments, user=user, search_query=search_query)
     except Exception as e:
         print(f"Counselor dashboard error: {e}")
         flash('An error occurred loading the counselor dashboard.')
         return redirect(url_for('landing'))
+
+@app.route('/counselor/add_program', methods=['POST'])
+@counselor_required
+def add_program():
+    try:
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        test_id = request.form.get('test_id', '').strip()
+
+        if not all([name, description, test_id]):
+            flash('All fields are required.')
+            return redirect(url_for('counselor_dashboard'))
+
+        # Validate test_id exists
+        test = Test.query.get(int(test_id))
+        if not test:
+            flash('Invalid test selected.')
+            return redirect(url_for('counselor_dashboard'))
+
+        remedial = Remedial(
+            test_id=int(test_id),
+            name=name,
+            description=description
+        )
+        db.session.add(remedial)
+        db.session.commit()
+        flash('Program added successfully!')
+        return redirect(url_for('counselor_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"Add program error: {e}")
+        flash('An error occurred adding the program.')
+        return redirect(url_for('counselor_dashboard'))
+
+@app.route('/counselor/delete_program/<int:program_id>', methods=['POST'])
+@counselor_required
+def delete_program(program_id):
+    try:
+        remedial = Remedial.query.get_or_404(program_id)
+        db.session.delete(remedial)
+        db.session.commit()
+        flash('Program deleted successfully!')
+        return redirect(url_for('counselor_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"Delete program error: {e}")
+        flash('An error occurred deleting the program.')
+        return redirect(url_for('counselor_dashboard'))
+
+@app.route('/counselor/add_assessment', methods=['POST'])
+@counselor_required
+def add_assessment():
+    try:
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        difficulty_level = request.form.get('difficulty_level', 'medium').strip()
+
+        if not all([name, description]):
+            flash('Name and description are required.')
+            return redirect(url_for('counselor_dashboard'))
+
+        if difficulty_level not in ['easy', 'medium', 'hard']:
+            difficulty_level = 'medium'
+
+        test = Test(
+            name=name,
+            description=description,
+            difficulty_level=difficulty_level
+        )
+        db.session.add(test)
+        db.session.commit()
+        flash('Assessment added successfully!')
+        return redirect(url_for('counselor_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"Add assessment error: {e}")
+        flash('An error occurred adding the assessment.')
+        return redirect(url_for('counselor_dashboard'))
+
+@app.route('/counselor/delete_assessment/<int:assessment_id>', methods=['POST'])
+@counselor_required
+def delete_assessment(assessment_id):
+    try:
+        test = Test.query.get_or_404(assessment_id)
+        # Check if there are related remedials
+        if Remedial.query.filter_by(test_id=assessment_id).first():
+            flash('Cannot delete assessment with associated programs. Delete programs first.')
+            return redirect(url_for('counselor_dashboard'))
+
+        db.session.delete(test)
+        db.session.commit()
+        flash('Assessment deleted successfully!')
+        return redirect(url_for('counselor_dashboard'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"Delete assessment error: {e}")
+        flash('An error occurred deleting the assessment.')
+        return redirect(url_for('counselor_dashboard'))
 
 @app.route('/student/dashboard')
 @login_required

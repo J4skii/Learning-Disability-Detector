@@ -1,43 +1,375 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8" />
-    <title>Counselor Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Counselor Dashboard - LD Detector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <h1>Welcome, Counselor {{ user.name }}</h1>
-    <nav>
-        <a href="{{ url_for('landing') }}">Home</a> |
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </nav>
-    <h2>Student List</h2>
-    <table border="1" cellpadding="5" cellspacing="0">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Assessments</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for student in students %}
-            <tr>
-                <td>{{ student.name }}</td>
-                <td>{{ student.email }}</td>
-                <td><a href="{{ url_for('student_dashboard', user_id=student.id) }}">View Profile</a></td>
-                <td>
-                    <!-- Placeholder for actions like messaging or notes -->
-                    <a href="{{ url_for('student_dashboard', user_id=student.id) }}">Details</a>
+<body class="font-sans bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-all duration-300 min-h-screen">
+  <div class="max-w-7xl mx-auto p-6 space-y-8">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center">
+            <span class="text-2xl">👨‍🏫</span>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">Counselor Dashboard</h1>
+            <p class="text-gray-600 dark:text-gray-300">Welcome back, {{ user.name }}! Manage students, programs, and assessments.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            onclick="toggleTheme()"
+            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-blue-500/20"
+            aria-label="Toggle theme"
+          >
+            <span class="text-xl">🌗</span>
+          </button>
+          <a href="{{ url_for('logout') }}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all duration-300">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+      <div class="flex space-x-1 mb-6">
+        <button onclick="showTab('students')" id="students-tab" class="tab-button active px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300">👥 Students</button>
+        <button onclick="showTab('programs')" id="programs-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📚 Programs</button>
+        <button onclick="showTab('assessments')" id="assessments-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📝 Assessments</button>
+        <button onclick="showTab('results')" id="results-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📊 Results</button>
+      </div>
+
+      <!-- Students Tab -->
+      <div id="students-content" class="tab-content">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Student Management</h2>
+          <div class="text-gray-700 dark:text-gray-300 font-semibold mr-4">
+            Total Students: <span id="total-students">{{ students|length }}</span>
+          </div>
+          <div class="flex gap-4">
+            <input
+              type="text"
+              id="student-search"
+              placeholder="Search students..."
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+            >
+            <button onclick="searchStudents()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300">🔍 Search</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Age</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Gender</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Course</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Get to Know You</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="students-table-body">
+              {% for student in students %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ student.name }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.email }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.age or 'N/A' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.gender or 'N/A' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.course or 'N/A' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                  Learning Style: {{ student.g2k_learning_style or 'N/A' }}<br>
+                  Diagnosed Difficulties: {{ student.g2k_diagnosed_difficulties or 'N/A' }}<br>
+                  Age Group: {{ student.g2k_age_group or 'N/A' }}
                 </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4">No students found.</td>
-            </tr>
+                <td class="px-6 py-4 text-sm space-x-2">
+                  <a href="{{ url_for('student_dashboard', user_id=student.id) }}" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">View Profile</a>
+                  <button onclick="viewStudentResults('{{ student.email }}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-300">View Results</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if not students %}
+        <div class="p-12 text-center">
+          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span class="text-2xl text-gray-400">👥</span>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Students Found</h3>
+          <p class="text-gray-600 dark:text-gray-300">Students will appear here once they register and complete assessments.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Programs Tab -->
+      <div id="programs-content" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Program Management</h2>
+          <button onclick="addNewProgram()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add New Program</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for program in programs %}
+          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg">
+            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4">
+              <span class="text-2xl">📚</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">{{ program.name }}</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">{{ program.description or 'No description available.' }}</p>
+            <div class="flex gap-2">
+              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">Edit</button>
+              <button onclick="confirmDelete('program', '{{ program.id }}')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if not programs %}
+        <div class="p-12 text-center">
+          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span class="text-2xl text-gray-400">📚</span>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Programs Found</h3>
+          <p class="text-gray-600 dark:text-gray-300">Programs will appear here once they are added.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Assessments Tab -->
+      <div id="assessments-content" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Assessment Management</h2>
+          <button onclick="addNewAssessment()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add New Assessment</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for assessment in assessments %}
+          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg">
+            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4">
+              <span class="text-2xl">📝</span>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">{{ assessment.name }}</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">{{ assessment.description or 'No description available.' }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Difficulty: {{ assessment.difficulty_level.title() }}</p>
+            <div class="flex gap-2">
+              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">Edit</button>
+              <button onclick="confirmDelete('assessment', '{{ assessment.id }}')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if not assessments %}
+        <div class="p-12 text-center">
+          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span class="text-2xl text-gray-400">📝</span>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Assessments Found</h3>
+          <p class="text-gray-600 dark:text-gray-300">Assessments will appear here once they are added.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Results Tab -->
+      <div id="results-content" class="tab-content hidden">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Student Results Overview</h2>
+          <div class="flex gap-4">
+            <select id="result-filter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+              <option value="">All Tests</option>
+              <option value="Dyslexia">🔤 Dyslexia</option>
+              <option value="Dyscalculia">➗ Dyscalculia</option>
+              <option value="Working Memory">🖼️ Working Memory</option>
+            </select>
+            <button onclick="filterResults()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300">🔍 Filter</button>
+          </div>
+        </div>
+
+        <div id="results-container" class="space-y-4">
+          <!-- Results will be loaded here via JavaScript -->
+          <div class="p-12 text-center">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span class="text-2xl text-gray-400">📊</span>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Select a Student</h3>
+            <p class="text-gray-600 dark:text-gray-300">Click "View Results" on a student to see their assessment results here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for adding new programs/assessments -->
+  <div id="add-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+      <h3 class="text-2xl font-bold mb-4" id="modal-title">Add New Item</h3>
+
+      <!-- Add Program Form -->
+      <form id="add-program-form" class="hidden" action="{{ url_for('add_program') }}" method="POST">
+        <div class="mb-4">
+          <label for="program-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Program Name</label>
+          <input type="text" id="program-name" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+        </div>
+        <div class="mb-4">
+          <label for="program-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+          <textarea id="program-description" name="description" rows="3" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20"></textarea>
+        </div>
+        <div class="mb-6">
+          <label for="program-test-id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Related Assessment</label>
+          <select id="program-test-id" name="test_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+            <option value="">Select an assessment...</option>
+            {% for assessment in assessments %}
+            <option value="{{ assessment.id }}">{{ assessment.name }}</option>
             {% endfor %}
-        </tbody>
-    </table>
+          </select>
+        </div>
+        <div class="flex justify-end gap-4">
+          <button type="button" onclick="closeModal()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-all duration-300">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">Add Program</button>
+        </div>
+      </form>
+
+      <!-- Add Assessment Form -->
+      <form id="add-assessment-form" class="hidden" action="{{ url_for('add_assessment') }}" method="POST">
+        <div class="mb-4">
+          <label for="assessment-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assessment Name</label>
+          <input type="text" id="assessment-name" name="name" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+        </div>
+        <div class="mb-4">
+          <label for="assessment-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+          <textarea id="assessment-description" name="description" rows="3" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20"></textarea>
+        </div>
+        <div class="mb-6">
+          <label for="assessment-difficulty" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Difficulty Level</label>
+          <select id="assessment-difficulty" name="difficulty_level" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-4">
+          <button type="button" onclick="closeModal()" class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-all duration-300">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">Add Assessment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching functionality
+    function showTab(tabName) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+
+      // Remove active class from all tabs
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+        button.classList.remove('bg-blue-600', 'text-white');
+        button.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+      });
+
+      // Show selected tab content
+      document.getElementById(tabName + '-content').classList.remove('hidden');
+
+      // Add active class to selected tab
+      document.getElementById(tabName + '-tab').classList.add('active');
+      document.getElementById(tabName + '-tab').classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+      document.getElementById(tabName + '-tab').classList.add('bg-blue-600', 'text-white');
+    }
+
+    // Theme toggle
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      localStorage.setItem('theme', document.documentElement.dataset.theme);
+    }
+
+    // Load saved theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.dataset.theme = 'dark';
+    }
+
+    // Search students functionality
+    function searchStudents() {
+      const searchTerm = document.getElementById('student-search').value.toLowerCase();
+      const rows = document.querySelectorAll('#students-table-body tr');
+
+      rows.forEach(row => {
+        const name = row.cells[0].textContent.toLowerCase();
+        const email = row.cells[1].textContent.toLowerCase();
+        if (name.includes(searchTerm) || email.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // View student results
+    function viewStudentResults(email) {
+      showTab('results');
+      // In a real implementation, this would fetch results via AJAX
+      document.getElementById('results-container').innerHTML = `
+        <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg">
+          <h3 class="text-xl font-semibold mb-4">Results for ${email}</h3>
+          <p class="text-gray-600 dark:text-gray-300">Results loading... (This would be implemented with backend integration)</p>
+        </div>
+      `;
+    }
+
+    // Add new program/assessment
+    function addNewProgram() {
+      document.getElementById('modal-title').textContent = 'Add New Program';
+      document.getElementById('add-program-form').classList.remove('hidden');
+      document.getElementById('add-assessment-form').classList.add('hidden');
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+
+    function addNewAssessment() {
+      document.getElementById('modal-title').textContent = 'Add New Assessment';
+      document.getElementById('add-assessment-form').classList.remove('hidden');
+      document.getElementById('add-program-form').classList.add('hidden');
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+      // Reset forms
+      document.getElementById('add-program-form').reset();
+      document.getElementById('add-assessment-form').reset();
+      document.getElementById('add-program-form').classList.add('hidden');
+      document.getElementById('add-assessment-form').classList.add('hidden');
+    }
+
+    // Filter results (placeholder)
+    function filterResults() {
+      const filter = document.getElementById('result-filter').value;
+      // In a real implementation, this would filter results
+      console.log('Filtering by:', filter);
+    }
+  </script>
+
+  <script>
+    function confirmDelete(type, id) {
+      if (confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`)) {
+        // Create a form and submit POST request for deletion
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/counselor/delete_${type}/${id}`;
+        document.body.appendChild(form);
+        form.submit();
+      }
+    }
+  </script>
 </body>
 </html>
