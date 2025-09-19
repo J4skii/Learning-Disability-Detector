@@ -56,6 +56,17 @@ python app.py
 - Take assessments and view results on your dashboard
 - Admins and counselors can manage users and view reports
 
+## Recent Updates
+
+- Enhanced counselor dashboard: Added total student count display, gender column, get-to-know-you column to students table, implemented add/delete modals for programs and assessments with confirmation prompts, and JavaScript for confirmation dialogs.
+- Added new assessment templates: assessments.html, test_flash_cards.html, updated test_dyslexia.html, test_dyscalculia.html, and test_memory.html.
+- Added database migrations: Alembic setup with initial migration for dyslexia tests and remedial schema.
+- Updated app.py: Added routes for adding/deleting programs and assessments, ensured counselor_required decorator on new routes.
+- Added test_app.py for application testing.
+- Updated requirements.txt with new dependencies.
+- Updated models.py with new schema changes.
+- Updated TODO.md with completed tasks.
+
 ## License
 
 MIT License
