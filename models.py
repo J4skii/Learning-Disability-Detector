@@ -144,6 +144,29 @@ def get_user_remedial_progress(user_id=None, remedial_id=None):
         q = q.filter_by(remedial_id=remedial_id)
     return q.all()
 
+def get_student_results(student_id):
+    """Get all results for a specific student by user ID."""
+    return Result.query.filter_by(email=User.query.get(student_id).email).order_by(Result.timestamp.desc()).all()
+
+def get_all_students():
+    """Get all users with role 'student'."""
+    return User.query.filter_by(role='student').all()
+
+def get_programs():
+    """Get all remedial programs."""
+    return Remedial.query.all()
+
+def get_results_aggregates():
+    """Get aggregated data for graphs: average scores by test type, flagged counts, etc."""
+    from sqlalchemy import func
+    results = db.session.query(
+        Result.test_type,
+        func.avg(Result.score).label('avg_score'),
+        func.count(Result.id).label('total_results'),
+        func.sum(func.case((Result.flag == True, 1), else_=0)).label('flagged_count')
+    ).group_by(Result.test_type).all()
+    return results
+
 def create_sample_tests_and_remedials():
     """Create sample tests and remedials if they don't exist."""
     # Tests

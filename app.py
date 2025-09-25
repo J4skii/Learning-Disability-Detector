@@ -188,6 +188,76 @@ validate_configuration()
 # Initialize database with error handling
 initialize_database()
 
+def create_sample_data():
+    """Create sample students and assessments if they don't exist."""
+    try:
+        with app.app_context():
+            # Create sample students if none exist
+            if not User.query.filter_by(role='student').first():
+                sample_students = [
+                    {
+                        'name': 'John Doe',
+                        'email': 'john.doe@example.com',
+                        'role': 'student',
+                        'age': 20,
+                        'gender': 'Male',
+                        'course': 'Computer Science',
+                        'year': 'Sophomore'
+                    },
+                    {
+                        'name': 'Jane Smith',
+                        'email': 'jane.smith@example.com',
+                        'role': 'student',
+                        'age': 22,
+                        'gender': 'Female',
+                        'course': 'Psychology',
+                        'year': 'Junior'
+                    },
+                    {
+                        'name': 'Bob Johnson',
+                        'email': 'bob.johnson@example.com',
+                        'role': 'student',
+                        'age': 19,
+                        'gender': 'Male',
+                        'course': 'Engineering',
+                        'year': 'Freshman'
+                    }
+                ]
+                for student_data in sample_students:
+                    student = User(**student_data)
+                    student.set_password('password123')  # Default password for sample students
+                    db.session.add(student)
+                db.session.commit()
+                print("Sample students created successfully!")
+
+            # Create sample assessments if none exist
+            if not Test.query.first():
+                sample_assessments = [
+                    {
+                        'name': 'Dyslexia Test',
+                        'description': 'Test for dyslexia symptoms',
+                        'difficulty_level': 'medium'
+                    },
+                    {
+                        'name': 'Dyscalculia Test',
+                        'description': 'Test for dyscalculia symptoms',
+                        'difficulty_level': 'medium'
+                    },
+                    {
+                        'name': 'Memory Test',
+                        'description': 'Test for memory issues',
+                        'difficulty_level': 'easy'
+                    }
+                ]
+                for assessment_data in sample_assessments:
+                    assessment = Test(**assessment_data)
+                    db.session.add(assessment)
+                db.session.commit()
+                print("Sample assessments created successfully!")
+    except Exception as e:
+        print(f"Error creating sample data: {e}")
+        db.session.rollback()
+
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -674,6 +744,7 @@ def assessments():
 def counselor_dashboard():
     try:
         user = db.session.get(User, session['user_id'])
+
         # Get all students
         search_query = request.args.get('search', '').strip().lower()
         if search_query:
@@ -693,6 +764,30 @@ def counselor_dashboard():
         print(f"Counselor dashboard error: {e}")
         flash('An error occurred loading the counselor dashboard.')
         return redirect(url_for('landing'))
+
+@app.route('/counselor/results/<int:student_id>')
+@counselor_required
+def view_student_results(student_id):
+    try:
+        from models import get_student_results
+        results = get_student_results(student_id)
+        student = User.query.get_or_404(student_id)
+        return render_template('counselor_results.html', results=results, student=student)
+    except Exception as e:
+        print(f"View student results error: {e}")
+        flash('An error occurred loading student results.')
+        return redirect(url_for('counselor_dashboard'))
+
+@app.route('/counselor/generate_graph')
+@counselor_required
+def generate_graph():
+    try:
+        from models import get_results_aggregates
+        aggregates = get_results_aggregates()
+        return {'aggregates': aggregates}
+    except Exception as e:
+        print(f"Generate graph error: {e}")
+        return {'error': 'An error occurred generating graph data.'}, 500
 
 @app.route('/counselor/add_program', methods=['POST'])
 @counselor_required

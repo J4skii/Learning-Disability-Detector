@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Counselor Dashboard - LD Detector</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="font-sans bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-all duration-300 min-h-screen">
@@ -37,145 +38,184 @@
     <!-- Navigation Tabs -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
       <div class="flex space-x-1 mb-6">
-        <button onclick="showTab('students')" id="students-tab" class="tab-button active px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300">👥 Students</button>
-        <button onclick="showTab('programs')" id="programs-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📚 Programs</button>
-        <button onclick="showTab('assessments')" id="assessments-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📝 Assessments</button>
-        <button onclick="showTab('results')" id="results-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📊 Results</button>
+        <button onclick="showTab('users')" id="users-tab" class="tab-button active px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300">👥 Users Overview</button>
+        <button onclick="showTab('results')" id="results-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📊 View Results</button>
+        <button onclick="showTab('programs')" id="programs-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">📚 Programs & Assessments</button>
+        <button onclick="showTab('research')" id="research-tab" class="tab-button px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold transition-all duration-300">🔬 Research Tools</button>
       </div>
 
-      <!-- Students Tab -->
-      <div id="students-content" class="tab-content">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold">Student Management</h2>
-          <div class="text-gray-700 dark:text-gray-300 font-semibold mr-4">
-            Total Students: <span id="total-students">{{ students|length }}</span>
+      <!-- Users Overview Tab -->
+      <div id="users-content" class="tab-content">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <!-- Total Students Card -->
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-blue-100 text-sm font-medium">Total Students</p>
+                <p class="text-3xl font-bold">{{ students|length }}</p>
+              </div>
+              <div class="w-12 h-12 bg-blue-400/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">👥</span>
+              </div>
+            </div>
           </div>
-          <div class="flex gap-4">
-            <input
-              type="text"
-              id="student-search"
-              placeholder="Search students..."
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20"
-            >
-            <button onclick="searchStudents()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300">🔍 Search</button>
+
+          <!-- Active Assessments Card -->
+          <div class="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-green-100 text-sm font-medium">Active Assessments</p>
+                <p class="text-3xl font-bold">{{ assessments|length }}</p>
+              </div>
+              <div class="w-12 h-12 bg-green-400/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📝</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Programs Card -->
+          <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-xl shadow-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-purple-100 text-sm font-medium">Remedial Programs</p>
+                <p class="text-3xl font-bold">{{ programs|length }}</p>
+              </div>
+              <div class="w-12 h-12 bg-purple-400/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📚</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Age</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Gender</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Course</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Get to Know You</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="students-table-body">
-              {% for student in students %}
-              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ student.name }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.email }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.age or 'N/A' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.gender or 'N/A' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.course or 'N/A' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                  Learning Style: {{ student.g2k_learning_style or 'N/A' }}<br>
-                  Diagnosed Difficulties: {{ student.g2k_diagnosed_difficulties or 'N/A' }}<br>
-                  Age Group: {{ student.g2k_age_group or 'N/A' }}
-                </td>
-                <td class="px-6 py-4 text-sm space-x-2">
-                  <a href="{{ url_for('student_dashboard', user_id=student.id) }}" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">View Profile</a>
-                  <button onclick="viewStudentResults('{{ student.email }}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-300">View Results</button>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        {% if not students %}
-        <div class="p-12 text-center">
-          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span class="text-2xl text-gray-400">👥</span>
+        <!-- Students Table -->
+        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg overflow-hidden">
+          <div class="p-6 border-b border-gray-200 dark:border-gray-600">
+            <div class="flex justify-between items-center">
+              <h2 class="text-xl font-semibold">Student Directory</h2>
+              <div class="flex gap-4">
+                <input
+                  type="text"
+                  id="student-search"
+                  placeholder="Search students..."
+                  class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                >
+                <button onclick="searchStudents()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300">🔍 Search</button>
+              </div>
+            </div>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Students Found</h3>
-          <p class="text-gray-600 dark:text-gray-300">Students will appear here once they register and complete assessments.</p>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full">
+              <thead class="bg-gray-50 dark:bg-gray-600">
+                <tr>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Name</th>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Age</th>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Course</th>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Learning Style</th>
+                  <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-600" id="students-table-body">
+                {% for student in students %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-600/50 transition-colors duration-200">
+                  <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ student.name }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.email }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.age or 'N/A' }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.course or 'N/A' }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ student.g2k_learning_style or 'N/A' }}</td>
+                  <td class="px-6 py-4 text-sm space-x-2">
+                    <button onclick="viewStudentResults({{ student.id }})" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-300">View Results</button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if not students %}
+          <div class="p-12 text-center">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span class="text-2xl text-gray-400">👥</span>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Students Found</h3>
+            <p class="text-gray-600 dark:text-gray-300">Students will appear here once they register and complete assessments.</p>
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
 
-      <!-- Programs Tab -->
+      <!-- Programs & Assessments Tab -->
       <div id="programs-content" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold">Program Management</h2>
-          <button onclick="addNewProgram()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add New Program</button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {% for program in programs %}
-          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg">
-            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4">
-              <span class="text-2xl">📚</span>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Programs Section -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-xl font-semibold">Remedial Programs</h2>
+              <button onclick="addNewProgram()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add Program</button>
             </div>
-            <h3 class="text-lg font-semibold mb-2">{{ program.name }}</h3>
-            <p class="text-gray-600 dark:text-gray-300 mb-4">{{ program.description or 'No description available.' }}</p>
-            <div class="flex gap-2">
-              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">Edit</button>
-              <button onclick="confirmDelete('program', '{{ program.id }}')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
+
+            <div class="space-y-4 max-h-96 overflow-y-auto">
+              {% for program in programs %}
+              <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ program.name }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ program.description or 'No description available.' }}</p>
+                  </div>
+                  <button onclick="confirmDelete('program', '{{ program.id }}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
+                </div>
+              </div>
+              {% endfor %}
+
+              {% if not programs %}
+              <div class="p-8 text-center">
+                <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <span class="text-xl text-gray-400">📚</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">No Programs</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Add remedial programs to help students.</p>
+              </div>
+              {% endif %}
             </div>
           </div>
-          {% endfor %}
-        </div>
 
-        {% if not programs %}
-        <div class="p-12 text-center">
-          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span class="text-2xl text-gray-400">📚</span>
+          <!-- Assessments Section -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-xl font-semibold">Assessments</h2>
+              <button onclick="addNewAssessment()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add Assessment</button>
+            </div>
+
+            <div class="space-y-4 max-h-96 overflow-y-auto">
+              {% for assessment in assessments %}
+              <div class="border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ assessment.name }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ assessment.description or 'No description available.' }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Difficulty: {{ assessment.difficulty_level.title() }}</p>
+                  </div>
+                  <button onclick="confirmDelete('assessment', '{{ assessment.id }}')" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
+                </div>
+              </div>
+              {% endfor %}
+
+              {% if not assessments %}
+              <div class="p-8 text-center">
+                <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <span class="text-xl text-gray-400">📝</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-2">No Assessments</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Add assessments for students to take.</p>
+              </div>
+              {% endif %}
+            </div>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Programs Found</h3>
-          <p class="text-gray-600 dark:text-gray-300">Programs will appear here once they are added.</p>
         </div>
-        {% endif %}
       </div>
 
-      <!-- Assessments Tab -->
-      <div id="assessments-content" class="tab-content hidden">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold">Assessment Management</h2>
-          <button onclick="addNewAssessment()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">➕ Add New Assessment</button>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {% for assessment in assessments %}
-          <div class="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-lg">
-            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4">
-              <span class="text-2xl">📝</span>
-            </div>
-            <h3 class="text-lg font-semibold mb-2">{{ assessment.name }}</h3>
-            <p class="text-gray-600 dark:text-gray-300 mb-4">{{ assessment.description or 'No description available.' }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Difficulty: {{ assessment.difficulty_level.title() }}</p>
-            <div class="flex gap-2">
-              <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">Edit</button>
-              <button onclick="confirmDelete('assessment', '{{ assessment.id }}')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-300">Delete</button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        {% if not assessments %}
-        <div class="p-12 text-center">
-          <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span class="text-2xl text-gray-400">📝</span>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Assessments Found</h3>
-          <p class="text-gray-600 dark:text-gray-300">Assessments will appear here once they are added.</p>
-        </div>
-        {% endif %}
-      </div>
 
       <!-- Results Tab -->
       <div id="results-content" class="tab-content hidden">
@@ -200,6 +240,132 @@
             </div>
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Select a Student</h3>
             <p class="text-gray-600 dark:text-gray-300">Click "View Results" on a student to see their assessment results here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Research Tools Tab -->
+      <div id="research-content" class="tab-content hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-semibold mb-4">Research Tools & Analytics</h2>
+          <p class="text-gray-600 dark:text-gray-300">Advanced analytics and research tools for learning disability assessment data.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Data Export Section -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📊</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Data Export</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Export assessment data for research</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Export Format</label>
+                <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+                  <option value="csv">CSV</option>
+                  <option value="json">JSON</option>
+                  <option value="xlsx">Excel</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date Range</label>
+                <div class="grid grid-cols-2 gap-4">
+                  <input type="date" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+                  <input type="date" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+                </div>
+              </div>
+
+              <button class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-300">Export Data</button>
+            </div>
+          </div>
+
+          <!-- Analytics Dashboard -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📈</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Analytics Dashboard</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">View detailed analytics and trends</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-600 p-4 rounded-xl">
+                  <p class="text-sm text-gray-600 dark:text-gray-300">Avg. Dyslexia Score</p>
+                  <p class="text-2xl font-bold text-gray-900 dark:text-white">72%</p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-600 p-4 rounded-xl">
+                  <p class="text-sm text-gray-600 dark:text-gray-300">Avg. Dyscalculia Score</p>
+                  <p class="text-2xl font-bold text-gray-900 dark:text-white">68%</p>
+                </div>
+              </div>
+
+              <button class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-300">View Full Analytics</button>
+            </div>
+          </div>
+
+          <!-- Research Reports -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">📋</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">Research Reports</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Generate automated research reports</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Type</label>
+                <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/20">
+                  <option value="summary">Assessment Summary</option>
+                  <option value="trends">Trend Analysis</option>
+                  <option value="demographics">Demographic Analysis</option>
+                  <option value="correlation">Correlation Study</option>
+                </select>
+              </div>
+
+              <button class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-all duration-300">Generate Report</button>
+            </div>
+          </div>
+
+          <!-- API Access -->
+          <div class="bg-white dark:bg-gray-700 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">🔗</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold">API Access</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-300">Access assessment data via API</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="bg-gray-50 dark:bg-gray-600 p-3 rounded-xl font-mono text-sm">
+                <p class="text-gray-600 dark:text-gray-300">API Endpoint:</p>
+                <p class="text-gray-900 dark:text-white">/api/v1/assessment-data</p>
+              </div>
+
+              <div class="bg-gray-50 dark:bg-gray-600 p-3 rounded-xl font-mono text-sm">
+                <p class="text-gray-600 dark:text-gray-300">API Key:</p>
+                <p class="text-gray-900 dark:text-white">••••••••••••••••</p>
+              </div>
+
+              <button class="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl transition-all duration-300">Manage API Keys</button>
+            </div>
           </div>
         </div>
       </div>
