@@ -464,28 +464,45 @@ def test_comprehension():
             flash("Session expired. Please log in again.")
             return redirect(url_for('login'))
 
+        # Always generate the test set (so both GET and POST use the same sampled questions)
+        test_set = get_comprehension_test()
+
+        # Flatten the 15 chosen questions into a lookup dict
+        chosen_questions = []
+        for block in test_set.values():
+            chosen_questions.extend(block["questions"])
+        chosen_map = {q["id"]: q for q in chosen_questions}
+
         if request.method == 'POST':
             score = 0
             total = 0
+
             for key, value in request.form.items():
                 if key.startswith("q"):  # e.g., q1, q2
                     total += 1
-                    qid = int(key[1:])  # extract numeric id
-                    question = next(q for q in QUESTIONS if q["id"] == qid)
-                    if value == question["answer"]:
+                    qid = int(key[1:])
+                    question = chosen_map.get(qid)
+                    if question and value == question["answer"]:
                         score += 1
 
             message = f"You scored {score}/{total}."
-            save_result(user.name, user.email, "Comprehension", score, score < total//2, message)
+            save_result(
+                user.name,
+                user.email,
+                "Comprehension",
+                score,
+                score < total // 2,
+                message
+            )
 
             return render_template("results.html", result={
                 "type": "Comprehension",
                 "score": score,
-                "flag": score < total//2,
+                "flag": score < total // 2,
                 "message": message
             })
 
-        test_set = get_comprehension_test()
+        # GET: render the comprehension test page
         return render_template("test_comprehension.html", questions=test_set, user=user)
 
     except Exception as e:

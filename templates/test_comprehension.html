@@ -240,11 +240,25 @@
       }
 
       function updateProgress(index) {
-        const total = cards.length;
-        const pct = Math.round(((index + 1) / total) * 100);
-        progressBar.style.width = Math.max(5, pct) + "%";
-        progressLabel.textContent = `Card ${index + 1} of ${total}`;
-        progressPct.textContent = `${pct}%`;
+        const questionCards = cards.filter(
+          (c) => c.dataset.kind === "question"
+        );
+        const totalQ = questionCards.length;
+
+        if (cards[index].dataset.kind === "question") {
+          // We are on a question card
+          const qNum = questionCards.indexOf(cards[index]) + 1;
+          const pct = Math.round((qNum / totalQ) * 100);
+
+          progressLabel.textContent = `Question ${qNum} of ${totalQ}`;
+          progressPct.textContent = `${pct}%`;
+          progressBar.style.width = Math.max(5, pct) + "%";
+        } else {
+          // We are on a passage card
+          progressLabel.textContent = "Reading Passage";
+          progressPct.textContent = "--";
+          progressBar.style.width = "0%";
+        }
       }
 
       function currentAnswerSelected() {
