@@ -6,10 +6,10 @@
     <title>Comprehension Test - LD Detector</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      .question-card {
+      .card {
         display: none;
       }
-      .question-card.active {
+      .card.active {
         display: block;
       }
       .progress-track {
@@ -24,7 +24,7 @@
   <body
     class="font-sans bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white min-h-screen flex items-center justify-center"
   >
-    <div class="max-w-2xl w-full p-6">
+    <div class="max-w-3xl w-full p-6">
       <div
         class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 space-y-6"
       >
@@ -32,61 +32,64 @@
         <h1
           class="text-2xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400"
         >
-          📖 Comprehension Quiz
+          📖 Reading Comprehension
         </h1>
 
-        <!-- Intro block (dynamic counts) -->
+        {% set ns = namespace(total=0) %} {% for pkey, block in
+        questions.items() %} {% set ns.total = ns.total + (block.questions |
+        length) %} {% endfor %}
+
+        <!-- Intro -->
         <section
           class="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900"
         >
-          <h2 class="font-semibold mb-2">What to expect</h2>
+          <h2 class="font-semibold mb-2">What you'll do</h2>
           <ul
             class="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300"
           >
             <li>
-              You’ll answer <strong>{{ questions|length }}</strong> questions in
-              this attempt.
+              You’ll answer <strong>{{ ns.total }}</strong> questions total.
             </li>
             <li>
-              Each question is <strong>multiple choice</strong> with
-              <strong>one correct answer</strong> (a–d).
+              There are <strong>3 passages</strong>. You’ll see each passage
+              first, then <strong>5 multiple-choice questions</strong> from that
+              passage.
             </li>
             <li>
-              The set is <strong>randomly selected</strong> and the answer
-              options are shuffled. Not all questions appear every time.
+              Questions are <strong>randomised</strong> every attempt and answer
+              options are shuffled.
             </li>
             <li>
-              Content is drawn from three short passages:
+              Content covered:
               <ul class="list-disc pl-5 mt-1">
                 <li>
-                  <em>The Procrastination Puzzle</em> (emotion-driven delay,
-                  habit loops, practical starters)
+                  <em>The Procrastination Puzzle</em> — emotion-driven delay,
+                  habit loops, practical starters
                 </li>
                 <li>
-                  <em>Perfectionism as Hidden Procrastination</em> (fear
-                  management, looping edits, reframing success)
+                  <em>Perfectionism as Hidden Procrastination</em> — fear
+                  management, looping edits, reframing success
                 </li>
                 <li>
-                  <em>The Multitasking Myth</em> (task-switching costs, novelty
-                  rewards, focus strategies)
+                  <em>The Multitasking Myth</em> — task-switching costs, novelty
+                  rewards, focus strategies
                 </li>
               </ul>
             </li>
             <li>
-              You can move back and forth. Your score is the number of correct
-              answers.
+              You’ll work <strong>one card at a time</strong> like flashcards.
+              You can go back and forth. Your score is the number correct.
             </li>
           </ul>
           <p class="text-xs text-gray-600 dark:text-gray-400 mt-3">
-            Tip: choose the best answer based on the passage ideas, not personal
-            opinion.
+            Tip: Answer based on the passage, not personal opinion.
           </p>
         </section>
 
         <!-- Progress -->
         <div>
           <div class="flex justify-between items-center text-sm mb-2">
-            <span id="progressLabel">Question 1 of {{ questions|length }}</span>
+            <span id="progressLabel">Card 1 of …</span>
             <span id="progressPct">0%</span>
           </div>
           <div
@@ -116,14 +119,43 @@
             value="{{ user.email if user else '' }}"
           />
 
-          {% for q in questions %}
-          <input type="hidden" name="q_ids" value="{{ q.id }}" />
+          {# Build a linear deck of cards: passage card -> 5 question cards ->
+          next passage card -> ... #} {% set qindex = 0 %} {% for pkey, block in
+          questions.items() %}
+          <!-- PASSAGE CARD -->
           <div
-            class="question-card {% if loop.first %}active{% endif %}"
-            id="q{{ q.id }}"
+            class="card {% if loop.first %}active{% endif %}"
+            data-kind="passage"
+            id="passage-{{ pkey }}"
           >
+            <div
+              class="mb-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400"
+            >
+              Passage
+            </div>
+            <h2 class="text-lg font-semibold mb-3">
+              {% if pkey == 'procrastination' %} The Procrastination Puzzle {%
+              elif pkey == 'perfectionism' %} Perfectionism as Hidden
+              Procrastination {% else %} The Multitasking Myth {% endif %}
+            </h2>
+            <div
+              class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed"
+            >
+              {{ block.text }}
+            </div>
+            <div
+              class="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-800 dark:text-blue-200"
+            >
+              Ready? Click “Next” to answer 5 questions about this passage.
+            </div>
+          </div>
+
+          {# QUESTION CARDS FOR THIS PASSAGE (5) #} {% for q in block.questions
+          %} {% set qindex = qindex + 1 %}
+          <input type="hidden" name="q_ids" value="{{ q.id }}" />
+          <div class="card" data-kind="question" id="q{{ q.id }}">
             <p class="font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              {{ loop.index }}. {{ q.text }}
+              {{ qindex }}. {{ q.text }}
             </p>
             <div class="space-y-3">
               {% for key, text in q.options_shuffled %}
@@ -141,7 +173,7 @@
               {% endfor %}
             </div>
           </div>
-          {% endfor %}
+          {% endfor %} {% endfor %}
 
           <!-- Nav buttons -->
           <div class="flex justify-between items-center mt-6">
@@ -164,7 +196,7 @@
               id="submitBtn"
               class="hidden px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
             >
-              ✅ Submit Answers
+              ✅ Submit
             </button>
           </div>
         </form>
@@ -172,7 +204,7 @@
     </div>
 
     <script>
-      const cards = document.querySelectorAll(".question-card");
+      const cards = Array.from(document.querySelectorAll(".card"));
       let current = 0;
 
       const prevBtn = document.getElementById("prevBtn");
@@ -182,28 +214,43 @@
       const progressLabel = document.getElementById("progressLabel");
       const progressPct = document.getElementById("progressPct");
 
-      function visibleCard(index) {
+      function showCard(index) {
         cards.forEach((c, i) => c.classList.toggle("active", i === index));
+        updateButtons(index);
+        updateProgress(index);
       }
 
       function updateButtons(index) {
         prevBtn.style.display = index > 0 ? "inline-block" : "none";
-        nextBtn.style.display =
-          index < cards.length - 1 ? "inline-block" : "none";
+        const lastIndex = cards.length - 1;
+        const isLast = index === lastIndex;
+
+        // If on last card and it's a question, show submit
         submitBtn.style.display =
-          index === cards.length - 1 ? "inline-block" : "none";
+          isLast && cards[index].dataset.kind === "question"
+            ? "inline-block"
+            : "none";
+        nextBtn.style.display = isLast ? "none" : "inline-block";
+
+        if (cards[index].dataset.kind === "passage") {
+          nextBtn.textContent = "Start Questions ➡";
+        } else {
+          nextBtn.textContent = "Next ➡";
+        }
       }
 
       function updateProgress(index) {
         const total = cards.length;
-        const pct = Math.round((index / total) * 100); // before answering current
+        const pct = Math.round(((index + 1) / total) * 100);
         progressBar.style.width = Math.max(5, pct) + "%";
-        progressLabel.textContent = `Question ${index + 1} of ${total}`;
+        progressLabel.textContent = `Card ${index + 1} of ${total}`;
         progressPct.textContent = `${pct}%`;
       }
 
       function currentAnswerSelected() {
-        const radios = cards[current].querySelectorAll('input[type="radio"]');
+        const card = cards[current];
+        if (card.dataset.kind !== "question") return true;
+        const radios = card.querySelectorAll('input[type="radio"]');
         for (const r of radios) if (r.checked) return true;
         return false;
       }
@@ -211,30 +258,22 @@
       prevBtn.addEventListener("click", () => {
         if (current > 0) {
           current--;
-          visibleCard(current);
-          updateButtons(current);
-          updateProgress(current);
+          showCard(current);
         }
       });
 
       nextBtn.addEventListener("click", () => {
-        // Require an answer before moving forward
         if (!currentAnswerSelected()) {
           alert("Please choose an answer before continuing.");
           return;
         }
         if (current < cards.length - 1) {
           current++;
-          visibleCard(current);
-          updateButtons(current);
-          updateProgress(current);
+          showCard(current);
         }
       });
 
-      // Initialize
-      visibleCard(current);
-      updateButtons(current);
-      updateProgress(current);
+      showCard(current);
     </script>
   </body>
 </html>

@@ -452,7 +452,7 @@ def get_to_know_you():
         print(f"Get to know you error: {e}")
         flash('An error occurred. Please try again.')
         return redirect(url_for('landing'))
-from comprehension_questions import get_random_questions, QUESTIONS
+from comprehension_questions import get_random_questions as get_comprehension_test
 
 @app.route('/test/comprehension', methods=['GET', 'POST'])
 @login_required
@@ -461,49 +461,38 @@ def test_comprehension():
         user = db.session.get(User, session['user_id'])
         if not user:
             session.clear()
-            flash('Session expired. Please log in again.')
+            flash("Session expired. Please log in again.")
             return redirect(url_for('login'))
 
-        if not user.completed_get_to_know_you:
-            flash('Please complete the "Get to Know You" assessment first.')
-            return redirect(url_for('landing'))
-
         if request.method == 'POST':
-            name = request.form.get('name', '').strip()
-            email = request.form.get('email', '').strip().lower()
+            score = 0
+            total = 0
+            for key, value in request.form.items():
+                if key.startswith("q"):  # e.g., q1, q2
+                    total += 1
+                    qid = int(key[1:])  # extract numeric id
+                    question = next(q for q in QUESTIONS if q["id"] == qid)
+                    if value == question["answer"]:
+                        score += 1
 
-            if not name or not email:
-                flash('Name and email are required.')
-                return redirect(url_for('test_comprehension'))
+            message = f"You scored {score}/{total}."
+            save_result(user.name, user.email, "Comprehension", score, score < total//2, message)
 
-            # Selected question ids posted as hidden inputs
-            selected_ids = request.form.getlist('q_ids')   # e.g. ["12", "5", ...]
-            correct = 0
-            total = len(selected_ids)
+            return render_template("results.html", result={
+                "type": "Comprehension",
+                "score": score,
+                "flag": score < total//2,
+                "message": message
+            })
 
-            for qid_str in selected_ids:
-                qid = int(qid_str)
-                user_ans = request.form.get(f"q{qid}")  # radio value "a"/"b"/"c"/"d"
-                question = next((q for q in QUESTIONS if q["id"] == qid), None)
-                if question and user_ans == question["answer"]:
-                    correct += 1
-
-            score = correct
-            flag = score < (total // 2)
-            message = f"You answered {score} out of {total} correctly."
-
-            save_result(name, email, 'Comprehension', score, flag, message)
-            result = {'type': 'Comprehension', 'score': score, 'flag': flag, 'message': message}
-            return render_template('results.html', result=result)
-
-        # GET: choose N random questions (tweak num_questions as you like)
-        random_questions = get_random_questions(num_questions=10, shuffle_options=True)
-        return render_template('test_comprehension.html', user=user, questions=random_questions)
+        test_set = get_comprehension_test()
+        return render_template("test_comprehension.html", questions=test_set, user=user)
 
     except Exception as e:
         print(f"Comprehension test error: {e}")
-        flash('An error occurred during the comprehension test. Please try again.')
+        flash("Error during comprehension test. Try again.")
         return redirect(url_for('landing'))
+
 
 @app.route('/test/dyslexia', methods=['GET', 'POST'])
 @login_required
