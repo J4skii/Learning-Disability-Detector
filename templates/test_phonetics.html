@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phonetics Assessment - LD Detector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-sans bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-emerald-900 dark:to-indigo-900 min-h-screen text-gray-900 dark:text-white transition-all duration-300">
+  <div class="max-w-4xl mx-auto p-6 space-y-8">
+    <header class="bg-white/90 dark:bg-gray-800/90 rounded-2xl shadow-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 bg-emerald-200 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center text-3xl">
+          🗣️
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-indigo-500">Phonetics Assessment</h1>
+          <p class="text-gray-600 dark:text-gray-300">Screening for phonetic awareness and language processing.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('index') }}" class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 transition">← Back to Home</a>
+        <button onclick="toggleTheme()" class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-700 transition" aria-label="Toggle theme">🌗</button>
+      </div>
+    </header>
+
+    <section class="bg-white/90 dark:bg-gray-800/90 rounded-2xl shadow-xl p-8">
+      <p class="text-sm text-emerald-700 dark:text-emerald-300 mb-6">Answer each question carefully. These items focus on recognizing sounds, patterns, and phonetic rules.</p>
+      <form method="POST" class="space-y-8" id="phoneticsForm">
+        <input type="hidden" name="duration_ms" id="durationMs">
+        <input type="hidden" name="name" value="{{ session.get('user_name', '') }}">
+        <input type="hidden" name="email" value="{{ user.email if user else '' }}">
+
+        {% for question in questions %}
+        <div class="bg-gray-50 dark:bg-gray-700/40 rounded-2xl p-6 space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ loop.index }}. {{ question.text }}</h3>
+          <div class="space-y-3">
+            {% for value, label in question.options %}
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-emerald-300 dark:hover:border-emerald-500 cursor-pointer transition-all duration-300 focus-within:ring-4 focus-within:ring-emerald-500/20">
+              <input type="radio" name="{{ question.id }}" value="{{ value }}" class="w-5 h-5 text-emerald-600 focus:ring-emerald-500 focus:ring-2">
+              <span class="text-base">{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="pt-6 border-t border-gray-200 dark:border-gray-700">
+          <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-indigo-500 hover:from-emerald-600 hover:to-indigo-600 text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 text-lg shadow-lg hover:shadow-xl transform hover:scale-105">
+            Submit Phonetics Assessment
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.dataset.theme = 'dark';
+    }
+
+    const form = document.getElementById('phoneticsForm');
+    const durationInput = document.getElementById('durationMs');
+    const startTime = performance.now();
+
+    if (form && durationInput) {
+      form.addEventListener('submit', () => {
+        durationInput.value = Math.round(performance.now() - startTime);
+      });
+    }
+  </script>
+</body>
+</html>

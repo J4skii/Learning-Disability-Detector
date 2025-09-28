@@ -118,6 +118,7 @@
             name="email"
             value="{{ user.email if user else '' }}"
           />
+          <input type="hidden" name="duration_ms" id="durationMs" />
 
           {# Build a linear deck of cards: passage card -> 5 question cards ->
           next passage card -> ... #} {% set qindex = 0 %} {% for pkey, block in
@@ -206,6 +207,7 @@
     <script>
       const cards = Array.from(document.querySelectorAll(".card"));
       let current = 0;
+      const startTime = performance.now();
 
       const prevBtn = document.getElementById("prevBtn");
       const nextBtn = document.getElementById("nextBtn");
@@ -213,6 +215,8 @@
       const progressBar = document.getElementById("progressBar");
       const progressLabel = document.getElementById("progressLabel");
       const progressPct = document.getElementById("progressPct");
+      const form = document.getElementById("quizForm");
+      const durationInput = document.getElementById("durationMs");
 
       function showCard(index) {
         cards.forEach((c, i) => c.classList.toggle("active", i === index));
@@ -284,6 +288,12 @@
         if (current < cards.length - 1) {
           current++;
           showCard(current);
+        }
+      });
+
+      form.addEventListener("submit", () => {
+        if (durationInput) {
+          durationInput.value = Math.round(performance.now() - startTime);
         }
       });
 

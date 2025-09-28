@@ -10,7 +10,20 @@ from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy.exc import SQLAlchemyError
 
 # Local imports
-from models import db, User, Test, Remedial, save_result, get_filtered_results, export_results_to_csv, create_hardcoded_users
+from models import (
+    db,
+    User,
+    Test,
+    Remedial,
+    save_result,
+    get_filtered_results,
+    export_results_to_csv,
+    create_hardcoded_users,
+    save_attempt,
+    ensure_test,
+    get_user_summary,
+    get_user_recent_history,
+)
 from ld_logic import evaluate_dyslexia, evaluate_dyscalculia, evaluate_memory
 
 # Initialize Flask app
@@ -142,6 +155,13 @@ def migrate_database():
                 print("Database migration completed successfully!")
             else:
                 print("User table does not exist yet. Migration will be handled by db.create_all().")
+
+            if inspector.has_table('result'):
+                result_columns = [col['name'] for col in inspector.get_columns('result')]
+                if 'timestamp' not in result_columns:
+                    print("Adding timestamp column to Result table...")
+                    db.session.execute(db.text('ALTER TABLE result ADD COLUMN timestamp DATETIME'))
+                    db.session.commit()
     except Exception as e:
         print(f"Database migration error: {e}")
         db.session.rollback()
@@ -486,19 +506,26 @@ def test_comprehension():
                         score += 1
 
             message = f"You scored {score}/{total}."
+            flag = score < total // 2
+
             save_result(
                 user.name,
                 user.email,
                 "Comprehension",
                 score,
-                score < total // 2,
+                flag,
                 message
             )
+
+            comprehension_test = ensure_test('Comprehension', 'Reading comprehension test')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, comprehension_test.id, score, flag, message, duration=duration)
 
             return render_template("results.html", result={
                 "type": "Comprehension",
                 "score": score,
-                "flag": score < total // 2,
+                "flag": flag,
                 "message": message
             })
 
@@ -508,6 +535,84 @@ def test_comprehension():
     except Exception as e:
         print(f"Comprehension test error: {e}")
         flash("Error during comprehension test. Try again.")
+        return redirect(url_for('landing'))
+
+
+@app.route('/test/phonetics', methods=['GET', 'POST'])
+@login_required
+def test_phonetics():
+    try:
+        user = db.session.get(User, session['user_id'])
+        if not user:
+            session.clear()
+            flash('Session expired. Please log in again.')
+            return redirect(url_for('login'))
+
+        if not user.completed_get_to_know_you:
+            flash('Please complete the "Get to Know You" assessment first.')
+            return redirect(url_for('landing'))
+
+        questions = [
+            {
+                'id': 'p1',
+                'text': 'Select the correct phonetic match for the sound /sh/.',
+                'options': [('a', 'ch'), ('b', 'sh'), ('c', 'th')],
+                'answer': 'b'
+            },
+            {
+                'id': 'p2',
+                'text': 'Which word starts with the same sound as "phone"?',
+                'options': [('a', 'fun'), ('b', 'graph'), ('c', 'phase')],
+                'answer': 'c'
+            },
+            {
+                'id': 'p3',
+                'text': 'Identify the silent letter in the word "knight".',
+                'options': [('a', 'k'), ('b', 'n'), ('c', 'g')],
+                'answer': 'a'
+            },
+            {
+                'id': 'p4',
+                'text': 'Choose the word that has a long vowel sound.',
+                'options': [('a', 'cat'), ('b', 'cake'), ('c', 'cup')],
+                'answer': 'b'
+            },
+            {
+                'id': 'p5',
+                'text': 'Which pair of words are homophones?',
+                'options': [('a', 'there / their'), ('b', 'read / red'), ('c', 'make / made')],
+                'answer': 'a'
+            },
+        ]
+
+        if request.method == 'POST':
+            answers = {q['id']: request.form.get(q['id']) for q in questions}
+            if not all(answers.values()):
+                flash('Please answer all questions.')
+                return redirect(url_for('test_phonetics'))
+
+            score = sum(1 for q in questions if answers.get(q['id']) == q['answer'])
+            flag = score < 3
+            message = f"You answered {score} out of {len(questions)} phonetics questions correctly."
+
+            save_result(user.name, user.email, 'Phonetics', score, flag, message)
+
+            phonetics_test = ensure_test('Phonetics', 'Phonetic awareness and language processing assessment')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, phonetics_test.id, score, flag, message, duration=duration)
+
+            return render_template('results.html', result={
+                'type': 'Phonetics',
+                'score': score,
+                'flag': flag,
+                'message': message
+            })
+
+        return render_template('test_phonetics.html', questions=questions, user=user)
+    except Exception as e:
+        print(f"Phonetics test error: {e}")
+        flash('An error occurred during the phonetics test. Please try again.')
         return redirect(url_for('landing'))
 
 
@@ -541,6 +646,12 @@ def test_dyslexia():
 
             result = evaluate_dyslexia(answers)
             save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
+
+            dyslexia_test = ensure_test('Dyslexia', 'Dyslexia screening assessment')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, dyslexia_test.id, result['score'], result['flag'], result['message'], duration=duration)
+
             return render_template('results.html', result=result)
 
         return render_template('test_dyslexia.html')
@@ -579,6 +690,12 @@ def test_dyscalculia():
 
             result = evaluate_dyscalculia(answers)
             save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
+
+            dyscalculia_test = ensure_test('Dyscalculia', 'Numeracy screening assessment')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, dyscalculia_test.id, result['score'], result['flag'], result['message'], duration=duration)
+
             return render_template('results.html', result=result)
 
         return render_template('test_dyscalculia.html')
@@ -617,6 +734,12 @@ def test_memory():
 
             result = evaluate_memory(answers)
             save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
+
+            memory_test = ensure_test('Working Memory', 'Visual memory recall test')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, memory_test.id, result['score'], result['flag'], result['message'], duration=duration)
+
             return render_template('results.html', result=result)
 
         return render_template('test_memory.html')
@@ -714,6 +837,11 @@ def test_flash_cards():
             message = f"You correctly identified {score} out of 5 flash card items."
 
             save_result(name, email, 'Flash Cards', score, flag, message)
+
+            flash_cards_test = ensure_test('Flash Cards', 'Rapid recognition spelling test')
+            duration_ms = request.form.get('duration_ms')
+            duration = int(duration_ms) / 1000 if duration_ms and duration_ms.isdigit() else None
+            save_attempt(user.id, flash_cards_test.id, score, flag, message, duration=duration)
             result = {
                 'type': 'Flash Cards',
                 'score': score,
@@ -955,11 +1083,20 @@ def student_dashboard():
             flash('Session expired. Please log in again.')
             return redirect(url_for('login'))
 
-        # Get user's test results for progress tracking
+        # Get user's analytics data for dashboard
         from models import Result
-        user_results = Result.query.filter_by(email=user.email).order_by(Result.timestamp.desc()).limit(10).all()
 
-        return render_template('student_dashboard.html', user=user, results=user_results)
+        user_results = Result.query.filter_by(email=user.email).order_by(Result.timestamp.desc()).limit(10).all()
+        summary = get_user_summary(user.email, user_id=user.id)
+        history = get_user_recent_history(user.id)
+
+        return render_template(
+            'student_dashboard.html',
+            user=user,
+            results=user_results,
+            summary=summary,
+            history=history,
+        )
     except Exception as e:
         print(f"Student dashboard error: {e}")
         flash('An error occurred loading the dashboard.')

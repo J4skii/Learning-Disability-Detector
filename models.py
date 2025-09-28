@@ -6,6 +6,15 @@ import csv
 
 db = SQLAlchemy()
 
+TEST_MAX_SCORES = {
+    'Comprehension': 15,
+    'Dyslexia': 5,
+    'Dyscalculia': 5,
+    'Phonetics': 5,
+    'Working Memory': 4,
+    'Flash Cards': 5,
+}
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -122,6 +131,118 @@ def get_user_attempts(user_id=None, test_id=None):
     if test_id:
         q = q.filter_by(test_id=test_id)
     return q.all()
+
+
+def ensure_test(name, description='', difficulty_level='medium'):
+    """Fetch a test by name, creating it if it does not exist."""
+    test = Test.query.filter_by(name=name).first()
+    if not test:
+        test = Test(name=name, description=description, difficulty_level=difficulty_level)
+        db.session.add(test)
+        db.session.commit()
+    return test
+
+
+def _build_test_lookup():
+    """Return a mapping of test_id to Test object for quick lookups."""
+    return {test.id: test for test in Test.query.all()}
+
+
+def get_user_summary(email, user_id=None):
+    """Aggregate per-test performance metrics for a given user."""
+    from sqlalchemy import func, case
+
+    summary = []
+    aggregates = (
+        db.session.query(
+            Result.test_type.label('test_type'),
+            func.count(Result.id).label('attempts'),
+            func.avg(Result.score).label('avg_score'),
+            func.max(Result.timestamp).label('last_attempt'),
+            func.sum(case((Result.flag == True, 1), else_=0)).label('flagged_count')
+        )
+        .filter(Result.email == email)
+        .group_by(Result.test_type)
+        .all()
+    )
+
+    duration_totals = {}
+    duration_counts = {}
+    if user_id:
+        attempts = get_user_attempts(user_id=user_id)
+        test_lookup = _build_test_lookup()
+        for attempt in attempts:
+            test = test_lookup.get(attempt.test_id)
+            if not test or attempt.duration is None:
+                continue
+            duration_totals.setdefault(test.name, 0)
+            duration_counts.setdefault(test.name, 0)
+            duration_totals[test.name] += attempt.duration
+            duration_counts[test.name] += 1
+
+    for row in aggregates:
+        max_score = TEST_MAX_SCORES.get(row.test_type)
+        avg_normalized = None
+        if max_score and row.avg_score is not None:
+            avg_normalized = row.avg_score / max_score
+
+        average_time = None
+        if duration_totals.get(row.test_type) and duration_counts.get(row.test_type):
+            average_time = duration_totals[row.test_type] / duration_counts[row.test_type]
+
+        summary.append({
+            'test_type': row.test_type,
+            'attempts': row.attempts,
+            'average_score': row.avg_score,
+            'average_normalized_score': avg_normalized,
+            'average_confidence': None,
+            'average_time_seconds': average_time,
+            'last_attempt': row.last_attempt,
+            'flagged_count': row.flagged_count or 0,
+        })
+
+    return summary
+
+
+def get_user_recent_history(user_id, limit=10):
+    """Return recent attempts with contextual details for dashboard timelines."""
+    attempts = (
+        User_Test_Attempt.query
+        .filter_by(user_id=user_id)
+        .order_by(User_Test_Attempt.attempt_date.desc())
+        .limit(limit)
+        .all()
+    )
+
+    test_lookup = _build_test_lookup()
+    history = []
+
+    for attempt in attempts:
+        test = test_lookup.get(attempt.test_id)
+        test_name = test.name if test else 'Unknown Test'
+        max_score = TEST_MAX_SCORES.get(test_name)
+        normalized = None
+        if max_score and attempt.score is not None:
+            normalized = attempt.score / max_score
+
+        if attempt.flag is None:
+            risk_level = None
+        else:
+            risk_level = 'high_risk' if attempt.flag else 'low_risk'
+
+        history.append({
+            'test_type': test_name,
+            'score': attempt.score,
+            'max_score': max_score,
+            'normalized_score': normalized,
+            'confidence_score': None,
+            'risk_level': risk_level,
+            'time_taken_seconds': attempt.duration,
+            'recommendations': attempt.message,
+            'created_at': attempt.attempt_date.isoformat() if attempt.attempt_date else None,
+        })
+
+    return history
 
 def save_remedial_progress(user_id, remedial_id, status, progress_percentage, notes=None):
     progress = User_Remedial_Progress.query.filter_by(user_id=user_id, remedial_id=remedial_id).first()

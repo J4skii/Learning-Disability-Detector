@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Student Dashboard - LD Detector</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="font-sans bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-white transition-all duration-300 min-h-screen">
-  <!-- Floating Navbar -->
   <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 shadow-lg">
     <div class="max-w-6xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center">
@@ -35,205 +35,209 @@
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <div class="pt-24 pb-8">
-    <div class="max-w-6xl mx-auto p-6 space-y-8">
-      <!-- Welcome Section -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-        <div class="text-center space-y-4">
-          <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
-            <span class="text-3xl text-white">{{ user.name[0].upper() }}</span>
-          </div>
-          <h1 class="text-3xl font-bold">Welcome back, {{ user.name }}!</h1>
-          <p class="text-gray-600 dark:text-gray-300">Here's your learning progress and information</p>
-        </div>
-      </div>
-
-      <!-- Student Information Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-          <div class="text-center space-y-3">
-            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mx-auto">
-              <span class="text-2xl">👤</span>
+  <main class="pt-24 pb-10">
+    <div class="max-w-6xl mx-auto px-4 space-y-8">
+      <section class="bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-xl p-8">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div class="flex items-center gap-4">
+            <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-3xl font-bold text-white">
+              {{ user.name[0].upper() }}
             </div>
             <div>
-              <h3 class="font-semibold text-lg">Personal Info</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Name: {{ user.name }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Age: {{ user.age }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Gender: {{ user.gender }}</p>
+              <p class="text-sm uppercase tracking-wide text-blue-600 dark:text-blue-300">Student dashboard</p>
+              <h1 class="text-3xl font-bold">Welcome back, {{ user.name }}!</h1>
+              <p class="text-gray-600 dark:text-gray-300">Track your assessments, time-on-task, and personalised recommendations.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 min-w-[220px]">
+            <div class="rounded-2xl bg-blue-50 dark:bg-blue-900/40 px-5 py-4">
+              <p class="text-xs uppercase text-blue-600 dark:text-blue-300">Completed tests</p>
+              <p class="text-2xl font-semibold">{{ summary|length }}</p>
+            </div>
+            <div class="rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 px-5 py-4">
+              <p class="text-xs uppercase text-indigo-600 dark:text-indigo-300">Recent attempts</p>
+              <p class="text-2xl font-semibold">{{ history|length }}</p>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-          <div class="text-center space-y-3">
-            <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mx-auto">
-              <span class="text-2xl">🎓</span>
-            </div>
-            <div>
-              <h3 class="font-semibold text-lg">Academic Info</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Course: {{ user.course }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Year: {{ user.year }}</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Email: {{ user.email }}</p>
-            </div>
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Profile</h2>
+            <span class="text-2xl">👤</span>
           </div>
+          <dl class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+            <div class="flex justify-between"><dt>Name</dt><dd>{{ user.name }}</dd></div>
+            <div class="flex justify-between"><dt>Email</dt><dd>{{ user.email }}</dd></div>
+            <div class="flex justify-between"><dt>Age</dt><dd>{{ user.age or '—' }}</dd></div>
+            <div class="flex justify-between"><dt>Gender</dt><dd>{{ user.gender or '—' }}</dd></div>
+          </dl>
+        </article>
+
+        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Academic</h2>
+            <span class="text-2xl">🎓</span>
+          </div>
+          <dl class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+            <div class="flex justify-between"><dt>Course</dt><dd>{{ user.course or '—' }}</dd></div>
+            <div class="flex justify-between"><dt>Year</dt><dd>{{ user.year or '—' }}</dd></div>
+            <div class="flex justify-between"><dt>Status</dt><dd>{% if user.completed_get_to_know_you %}Assessment ready{% else %}Complete onboarding{% endif %}</dd></div>
+          </dl>
+        </article>
+
+        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Quick actions</h2>
+            <span class="text-2xl">⚡</span>
+          </div>
+          <div class="space-y-3">
+            {% if not user.completed_get_to_know_you %}
+              <a href="{{ url_for('get_to_know_you') }}" class="block px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium text-center">Start "Get to Know You"</a>
+            {% else %}
+              <a href="/test/comprehensive" class="block px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium text-center">Take comprehension test</a>
+              <a href="/test/memory" class="block px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium text-center">Try memory challenge</a>
+              <a href="/test/dyslexia" class="block px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium text-center">Run dyslexia screening</a>
+            {% endif %}
+            <a href="{{ url_for('landing') }}" class="block px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-center">Browse all assessments</a>
+          </div>
+        </article>
+      </section>
+
+      {% if summary %}
+      <section class="space-y-6">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-semibold">Assessment performance</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Average scores, time-on-task, and flag status for each assessment type.</p>
+          </div>
+        </header>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for card in summary %}
+          <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold">{{ card.test_type }}</h3>
+              <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">{{ card.attempts }} attempts</span>
+            </div>
+            <dl class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              <div class="flex justify-between"><dt>Average score</dt><dd>{% if card.average_score is not none %}{{ card.average_score|round(2) }}{% else %}—{% endif %}</dd></div>
+              <div class="flex justify-between"><dt>Normalized</dt><dd>{% if card.average_normalized_score is not none %}{{ (card.average_normalized_score * 100)|round(1) }}%{% else %}—{% endif %}</dd></div>
+              <div class="flex justify-between"><dt>Avg time</dt><dd>{% if card.average_time_seconds is not none %}{{ card.average_time_seconds|round(1) }}s{% else %}—{% endif %}</dd></div>
+              <div class="flex justify-between"><dt>Flags</dt><dd>{{ card.flagged_count }}</dd></div>
+              <div class="flex justify-between"><dt>Last attempt</dt><dd>{% if card.last_attempt %}{{ card.last_attempt.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</dd></div>
+            </dl>
+          </article>
+          {% endfor %}
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-          <div class="text-center space-y-3">
-            <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mx-auto">
-              <span class="text-2xl">📋</span>
-            </div>
-            <div>
-              <h3 class="font-semibold text-lg">Assessment Status</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-300">
-                {% if user.completed_get_to_know_you %}
-                  ✅ Completed
-                {% else %}
-                  ⏳ Pending
-                {% endif %}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">Get to Know You</p>
-            </div>
-          </div>
+      </section>
+      {% else %}
+      <section class="bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 p-12 text-center shadow-inner">
+        <h2 class="text-2xl font-semibold mb-2">No results yet</h2>
+        <p class="text-gray-600 dark:text-gray-300">Complete your first assessment to unlock personalised analytics and recommendations.</p>
+        <div class="mt-6 space-x-3">
+          <a href="{{ url_for('landing') }}" class="inline-flex items-center px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium">View assessments</a>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-          <div class="text-center space-y-3">
-            <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mx-auto">
-              <span class="text-2xl">📊</span>
-            </div>
-            <div>
-              <h3 class="font-semibold text-lg">Test Results</h3>
-              <p class="text-sm text-gray-600 dark:text-gray-300">View your assessment</p>
-              <p class="text-sm text-gray-600 dark:text-gray-300">results and progress</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Get to Know You Responses -->
-      {% if user.completed_get_to_know_you %}
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold mb-6 text-center">Your Assessment Responses</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {% if user.g2k_learning_style %}
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-            <h3 class="font-semibold text-lg mb-3 flex items-center">
-              <span class="text-2xl mr-3">🧠</span>
-              Learning Style
-            </h3>
-            <p class="text-gray-700 dark:text-gray-300">{{ user.g2k_learning_style }}</p>
-          </div>
-          {% endif %}
-
-          {% if user.g2k_diagnosed_difficulties %}
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-            <h3 class="font-semibold text-lg mb-3 flex items-center">
-              <span class="text-2xl mr-3">📋</span>
-              Diagnosed Difficulties
-            </h3>
-            <p class="text-gray-700 dark:text-gray-300">{{ user.g2k_diagnosed_difficulties }}</p>
-          </div>
-          {% endif %}
-
-          {% if user.g2k_age_group %}
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 md:col-span-2">
-            <h3 class="font-semibold text-lg mb-3 flex items-center">
-              <span class="text-2xl mr-3">👶</span>
-              Age Group
-            </h3>
-            <p class="text-gray-700 dark:text-gray-300">{{ user.g2k_age_group }}</p>
-          </div>
-          {% endif %}
-        </div>
-      </div>
+      </section>
       {% endif %}
 
-      <!-- Quick Actions -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold mb-6 text-center">Quick Actions</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {% if not user.completed_get_to_know_you %}
-          <a href="{{ url_for('get_to_know_you') }}" class="group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl p-6 text-center transition-all duration-300 transform hover:scale-105">
-            <div class="space-y-3">
-              <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <span class="text-3xl">🚀</span>
-              </div>
-              <h3 class="font-bold text-lg">Start Assessment</h3>
-              <p class="text-sm opacity-90">Complete your initial evaluation</p>
+      {% if history %}
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <article class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+          <header class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-semibold">Progress timeline</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Normalized scores over time (higher is better).</p>
             </div>
-          </a>
-          {% else %}
-          <a href="/test/comprehensive" class="group bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-2xl p-6 text-center transition-all duration-300 transform hover:scale-105">
-            <div class="space-y-3">
-              <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <span class="text-3xl">📚</span>
-              </div>
-              <h3 class="font-bold text-lg">Comprehension</h3>
-              <p class="text-sm opacity-90">Comprehensive learning difficulty screening</p>
-            </div>
-          </a>
+          </header>
+          <canvas id="historyChart" height="140"></canvas>
+        </article>
 
-          <a href="/test/phonetics" class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-2xl p-6 text-center transition-all duration-300 transform hover:scale-105">
-            <div class="space-y-3">
-              <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <span class="text-3xl">🗣️</span>
-              </div>
-              <h3 class="font-bold text-lg">Phonetics</h3>
-              <p class="text-sm opacity-90">Phonetic awareness and language processing</p>
-            </div>
-          </a>
-
-          <a href="/test/memory" class="group bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl p-6 text-center transition-all duration-300 transform hover:scale-105">
-            <div class="space-y-3">
-              <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                <span class="text-3xl">🖼️</span>
-              </div>
-              <h3 class="font-bold text-lg">Memory Test</h3>
-              <p class="text-sm opacity-90">Visual memory assessment</p>
-            </div>
-          </a>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Recent Activity (Placeholder) -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold mb-6 text-center">Recent Activity</h2>
-        <div class="space-y-4">
-          <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <div class="flex items-center space-x-4">
-              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <span class="text-lg">📝</span>
-              </div>
-              <div>
-                <p class="font-medium">Account Created</p>
-                <p class="text-sm text-gray-600 dark:text-gray-300">Welcome to LD Detector!</p>
-              </div>
-            </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">Just now</span>
+        <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+          <header class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Latest insight</h2>
+            <span class="text-2xl">🔍</span>
+          </header>
+          {% set latest = history[0] %}
+          <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+            <p><span class="font-semibold">Assessment:</span> {{ latest.test_type }}</p>
+            <p><span class="font-semibold">Score:</span> {{ latest.score }}{% if latest.max_score %}/{{ latest.max_score }}{% endif %}</p>
+            <p><span class="font-semibold">Risk level:</span> {{ latest.risk_level.replace('_',' ')|title if latest.risk_level else 'Unknown' }}</p>
+            <p><span class="font-semibold">Duration:</span> {% if latest.time_taken_seconds %}{{ latest.time_taken_seconds|round(1) }}s{% else %}—{% endif %}</p>
+            <p><span class="font-semibold">Notes:</span> {{ latest.recommendations or 'No recommendation captured.' }}</p>
           </div>
-          {% if user.completed_get_to_know_you %}
-          <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <div class="flex items-center space-x-4">
-              <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                <span class="text-lg">✅</span>
-              </div>
-              <div>
-                <p class="font-medium">Assessment Completed</p>
-                <p class="text-sm text-gray-600 dark:text-gray-300">Get to Know You assessment finished</p>
-              </div>
-            </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">Recently</span>
+        </article>
+      </section>
+
+      <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 overflow-x-auto">
+        <header class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold">Recent assessment history</h2>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Showing {{ history|length }} most recent records</span>
+        </header>
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-100 dark:bg-gray-700/60">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold">Date</th>
+              <th class="px-4 py-3 text-left font-semibold">Assessment</th>
+              <th class="px-4 py-3 text-left font-semibold">Score</th>
+              <th class="px-4 py-3 text-left font-semibold">Risk</th>
+              <th class="px-4 py-3 text-left font-semibold">Time</th>
+              <th class="px-4 py-3 text-left font-semibold">Recommendation</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for row in history %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-4 py-3">{% if row.created_at %}{{ row.created_at.replace('T', ' ') }}{% else %}—{% endif %}</td>
+              <td class="px-4 py-3 font-medium">{{ row.test_type }}</td>
+              <td class="px-4 py-3">{% if row.score is not none %}{{ row.score }}{% else %}—{% endif %}{% if row.max_score %}<span class="text-xs text-gray-500"> / {{ row.max_score }}</span>{% endif %}</td>
+              <td class="px-4 py-3">
+                {% if row.risk_level %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                    {% if row.risk_level == 'low_risk' %}bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300{% endif %}
+                    {% if row.risk_level == 'medium_risk' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% endif %}
+                    {% if row.risk_level == 'high_risk' %}bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300{% endif %}">
+                    {{ row.risk_level.replace('_', ' ')|title }}
+                  </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">{% if row.time_taken_seconds %}{{ row.time_taken_seconds|round(1) }}s{% else %}—{% endif %}</td>
+              <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ row.recommendations or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+
+      {% if user.completed_get_to_know_you %}
+      <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6">
+        <header class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold">Get to Know You snapshot</h2>
+          <span class="text-2xl">🧾</span>
+        </header>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600 dark:text-gray-300">
+          <div class="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5">
+            <h3 class="font-semibold mb-2 flex items-center gap-2"><span>🧠</span> Learning style</h3>
+            <p>{{ user.g2k_learning_style or 'Not specified' }}</p>
           </div>
-          {% endif %}
+          <div class="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5">
+            <h3 class="font-semibold mb-2 flex items-center gap-2"><span>📋</span> Diagnosed difficulties</h3>
+            <p>{{ user.g2k_diagnosed_difficulties or 'Not specified' }}</p>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5">
+            <h3 class="font-semibold mb-2 flex items-center gap-2"><span>👶</span> Age group</h3>
+            <p>{{ user.g2k_age_group or 'Not specified' }}</p>
+          </div>
         </div>
-      </div>
+      </section>
+      {% endif %}
     </div>
-  </div>
+  </main>
 
-  <!-- Theme toggle script -->
   <script>
     function toggleTheme() {
       document.documentElement.classList.toggle('dark');
@@ -241,10 +245,87 @@
       localStorage.setItem('theme', document.documentElement.dataset.theme);
     }
 
-    // Load saved theme
-    if (localStorage.getItem('theme') === 'dark') {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark');
       document.documentElement.dataset.theme = 'dark';
+    }
+
+    const rawData = JSON.parse('{{ history|tojson|safe }}');
+    if (Array.isArray(rawData) && rawData.length) {
+      const ctx = document.getElementById('historyChart');
+      if (ctx) {
+        const sorted = rawData.slice().sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+        const labels = sorted.map(item => new Date(item.created_at || Date.now()).toLocaleString());
+        const datasetMap = new Map();
+
+        sorted.forEach(item => {
+          const key = item.test_type || 'Unknown';
+          if (!datasetMap.has(key)) {
+            const color = pickColor(key);
+            datasetMap.set(key, {
+              label: key,
+              data: new Array(sorted.length).fill(null),
+              borderColor: color,
+              backgroundColor: color,
+              tension: 0.35,
+              fill: false
+            });
+          }
+        });
+
+        sorted.forEach((item, idx) => {
+          const key = item.test_type || 'Unknown';
+          const dataset = datasetMap.get(key);
+          if (dataset) {
+            dataset.data[idx] = item.normalized_score != null ? Math.round(item.normalized_score * 1000) / 10 : null;
+          }
+        });
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: Array.from(datasetMap.values())
+          },
+          options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  callback(value) {
+                    return `${value}%`;
+                  }
+                }
+              }
+            },
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    return `${ctx.dataset.label}: ${ctx.parsed.y}%`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function pickColor(testType) {
+      const palette = {
+        'Comprehension': '#6366F1',
+        'Dyslexia': '#22C55E',
+        'Dyscalculia': '#F97316',
+        'Working Memory': '#EC4899',
+        'Flash Cards': '#0EA5E9'
+      };
+      return palette[testType] || '#8B5CF6';
     }
   </script>
 </body>
