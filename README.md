@@ -1,6 +1,6 @@
 # Learning Disability Detector
 
-This is a Flask-based web application designed to help detect learning disabilities such as dyslexia, dyscalculia, and memory-related issues through a series of assessments.
+This is a Flask-based web application designed to help detect learning disabilities such as dyslexia and memory-related issues through a series of assessments.
 
 ## Features
 
@@ -66,6 +66,12 @@ python app.py
 - Updated requirements.txt with new dependencies.
 - Updated models.py with new schema changes.
 - Updated TODO.md with completed tasks.
+
+## Notes
+
+- Routing for the pages needs to be double checked.
+- Programs content is required.
+- Memory and phonetics content for the assessment is required.
 
 ## License
 
