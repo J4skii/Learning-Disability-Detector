@@ -21,9 +21,9 @@
 
   <main class="pt-24 max-w-6xl mx-auto p-6">
     <h2 class="text-3xl font-bold mb-8 text-center">Choose an Assessment</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       <!-- Comprehension Card -->
-      <a href="{{ url_for('test_dyslexia') }}" class="block bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+      <a href="{{ url_for('test_comprehension') }}" class="block bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
         <div class="text-center">
           <div class="text-6xl mb-4">📖</div>
           <h3 class="text-xl font-semibold mb-2">Comprehension</h3>
@@ -49,14 +49,6 @@
         </div>
       </a>
 
-      <!-- Flash Cards Card -->
-      <a href="{{ url_for('test_flash_cards') }}" class="block bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
-        <div class="text-center">
-          <div class="text-6xl mb-4">🃏</div>
-          <h3 class="text-xl font-semibold mb-2">Flash Cards</h3>
-          <p class="text-gray-600 dark:text-gray-300">Interactive flash cards assessment</p>
-        </div>
-      </a>
     </div>
   </main>
 </body>

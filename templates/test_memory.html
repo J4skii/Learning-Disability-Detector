@@ -22,18 +22,53 @@
 <!-- Added modern gradient background and dyslexia-friendly font -->
 <body class="font-dyslexia bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 min-h-screen text-gray-900 dark:text-white transition-all duration-300">
   <div class="max-w-4xl mx-auto p-6">
-    <!-- Enhanced header with better spacing and modern styling -->
-    <div class="flex justify-between items-center mb-8">
+    <!-- Enhanced header with navigation and controls -->
+    <header class="mb-8 space-y-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <button type="button"
+                  onclick="handleBack()"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-xl shadow hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <span class="text-lg">←</span>
+            <span class="text-sm font-semibold">Go Back</span>
+          </button>
+          <span class="hidden sm:inline-block h-6 w-px bg-gray-300 dark:bg-gray-600"></span>
+          <div class="px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 text-xs font-semibold uppercase tracking-wide">
+            Level: {{ (difficulty|default('medium'))|title() }}
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="px-3 py-1 text-xs font-medium rounded-full bg-white/60 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
+            Step 1 of 2 · Memorize → Recall
+          </div>
+          <button onclick="toggleTheme()" 
+                  class="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  aria-label="Toggle theme">
+            <span class="text-lg">🌗</span>
+          </button>
+        </div>
+      </div>
+
       <div>
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">🖼️ Image Memory Test</h1>
         <p class="text-gray-600 dark:text-gray-300">Test your visual memory skills</p>
       </div>
-      <button onclick="toggleTheme()" 
-              class="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              aria-label="Toggle theme">
-        <span class="text-lg">🌗</span>
-      </button>
-    </div>
+
+      <div class="grid gap-4 md:grid-cols-3">
+        <div class="p-4 rounded-2xl bg-white/80 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 class="text-sm font-semibold text-purple-600 dark:text-purple-300 mb-1">⏱️ Preview Countdown</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">You have <strong>5 seconds</strong> to memorize all images before the recall phase starts automatically.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white/80 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 class="text-sm font-semibold text-purple-600 dark:text-purple-300 mb-1">📝 Recall Tips</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">Focus on unique details (colors, shapes, emojis) to improve accuracy during recall.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white/80 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 class="text-sm font-semibold text-purple-600 dark:text-purple-300 mb-1">💡 Need more time?</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">Reload the page or revisit the preview as many times as needed before submitting.</p>
+        </div>
+      </div>
+    </header>
 
     <!-- Modernized form with gradient background and rounded corners -->
     <form method="POST" class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
@@ -44,7 +79,8 @@
             Memorize these images carefully
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            They will disappear in <span id="count" class="font-bold text-purple-600 dark:text-purple-400 text-xl">5</span> seconds
+            They will disappear in <span id="count" class="font-bold text-purple-600 dark:text-purple-400 text-xl">5</span> seconds.
+            <span class="block text-xs mt-1 text-gray-500 dark:text-gray-400">Take a breath and scan each image from top to bottom.</span>
           </p>
         </div>
         
@@ -73,19 +109,19 @@
         </div>
       </div>
 
-      <div id="recall" style="display:none;">
         <!-- Enhanced recall section with better typography -->
         <div class="text-center mb-6">
           <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Recall Phase</h2>
           <p class="text-gray-600 dark:text-gray-400">Select the images you remember seeing:</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            If you need more time, you can reload the page or revisit the preview as many times as needed before submitting.
+          </p>
+          <a href="{{ url_for('test_memory', difficulty=difficulty|default('medium')) }}" 
+             class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-purple-200 mt-4">
+            <span class="text-base">↺</span>
+            Back to Preview
+          </a>
         </div>
-        
-        <!-- Modernized checkbox styling with better accessibility -->
-        <div class="grid grid-cols-2 gap-4 mb-8">
-          <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
-            <input type="checkbox" name="recall" value="Apple" 
-                   class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mr-3">
-            <span class="text-lg font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">🍎 Apple</span>
           </label>
           
           <label class="flex items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer group">
@@ -125,6 +161,13 @@
                   class="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
             Submit Memory Test
           </button>
+          <div class="mt-4">
+            <a href="{{ url_for('test_memory', difficulty=difficulty|default('medium')) }}"
+               class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-purple-200">
+              <span class="text-base">↺</span>
+              Restart preview
+            </a>
+          </div>
         </div>
       </div>
     </form>
@@ -146,6 +189,14 @@ const interval = setInterval(() => {
 function toggleTheme() {
   document.documentElement.classList.toggle('dark');
   document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+
+function handleBack() {
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = "{{ url_for('assessments') }}";
+  }
 }
 </script>
 </body>

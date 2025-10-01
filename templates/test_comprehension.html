@@ -35,9 +35,23 @@
           📖 Reading Comprehension
         </h1>
 
-        {% set ns = namespace(total=0) %} {% for pkey, block in
-        questions.items() %} {% set ns.total = ns.total + (block.questions |
-        length) %} {% endfor %}
+        {% set active_difficulty = test_data.difficulty %}
+        <div class="flex flex-wrap justify-center gap-3 mt-4">
+          {% for level in difficulties %}
+          {% set is_active = (level == active_difficulty) %}
+          <a
+            href="{{ url_for('test_comprehension', difficulty=level) }}"
+            class="px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 border {{ 'bg-blue-600 text-white border-blue-600 shadow-lg' if is_active else 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600' }}"
+          >
+            {{ level.title() }}
+          </a>
+          {% endfor %}
+        </div>
+
+        {% set ns = namespace(total=0) %}
+        {% for block in test_data.blocks.values() %}
+          {% set ns.total = ns.total + (block.questions | length) %}
+        {% endfor %}
 
         <!-- Intro -->
         <section
@@ -103,9 +117,16 @@
           </div>
         </div>
 
+        {% if ns.total == 0 %}
+        <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-xl p-6 text-center">
+          <p class="text-yellow-700 dark:text-yellow-200 font-medium">
+            Questions for this difficulty are coming soon. Please check back later or choose another level above.
+          </p>
+        </div>
+        {% else %}
         <form
           method="POST"
-          action="{{ url_for('test_comprehension') }}"
+          action="{{ url_for('test_comprehension', difficulty=active_difficulty) }}"
           id="quizForm"
         >
           <input
@@ -119,9 +140,9 @@
             value="{{ user.email if user else '' }}"
           />
 
-          {# Build a linear deck of cards: passage card -> 5 question cards ->
-          next passage card -> ... #} {% set qindex = 0 %} {% for pkey, block in
-          questions.items() %}
+          {# Build a linear deck of cards: passage card -> questions #}
+          {% set qindex = 0 %}
+          {% for pkey, block in test_data.blocks.items() %}
           <!-- PASSAGE CARD -->
           <div
             class="card {% if loop.first %}active{% endif %}"
@@ -134,9 +155,7 @@
               Passage
             </div>
             <h2 class="text-lg font-semibold mb-3">
-              {% if pkey == 'procrastination' %} The Procrastination Puzzle {%
-              elif pkey == 'perfectionism' %} Perfectionism as Hidden
-              Procrastination {% else %} The Multitasking Myth {% endif %}
+              {{ block.title }}
             </h2>
             <div
               class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed"
@@ -150,8 +169,9 @@
             </div>
           </div>
 
-          {# QUESTION CARDS FOR THIS PASSAGE (5) #} {% for q in block.questions
-          %} {% set qindex = qindex + 1 %}
+          {# QUESTION CARDS FOR THIS PASSAGE (5) #}
+          {% for q in block.questions %}
+          {% set qindex = qindex + 1 %}
           <input type="hidden" name="q_ids" value="{{ q.id }}" />
           <div class="card" data-kind="question" id="q{{ q.id }}">
             <p class="font-semibold text-gray-800 dark:text-gray-200 mb-4">
@@ -200,6 +220,7 @@
             </button>
           </div>
         </form>
+        {% endif %}
       </div>
     </div>
 

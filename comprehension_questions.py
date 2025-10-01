@@ -293,28 +293,48 @@ QUESTIONS = [
 ]
 
 
-def get_random_questions(seed=None):
-    """
-    Build a paper with exactly 15 questions: 5 randomly sampled from each passage.
-    - Answer options are shown in fixed order (a, b, c, d) — no shuffling.
-    - Returns a dict grouped by passage with the passage text and its 5 questions.
-    """
+PASSAGE_TITLES = {
+    "procrastination": "The Procrastination Puzzle",
+    "perfectionism": "Perfectionism as Hidden Procrastination",
+    "multitasking": "The Multitasking Myth",
+}
+
+LEVEL_PASSAGES = {
+    "easy": ["procrastination"],
+    "medium": ["perfectionism"],
+    "hard": ["multitasking"],
+}
+
+
+def get_questions_for_difficulty(difficulty, seed=None):
+    """Return passages/questions configured for a given difficulty."""
+    difficulty = (difficulty or "").lower()
+    if difficulty not in LEVEL_PASSAGES:
+        raise ValueError(f"Unsupported difficulty '{difficulty}'")
+
     rng = random.Random(seed)
     grouped = {}
 
-    for key in ("procrastination", "perfectionism", "multitasking"):
-        pool = [q.copy() for q in QUESTIONS if q["passage"] == key]
+    for passage_key in LEVEL_PASSAGES[difficulty]:
+        pool = [q.copy() for q in QUESTIONS if q["passage"] == passage_key]
 
-        # pick 5 random questions per passage
-        chosen = rng.sample(pool, k=5)
+        if len(pool) >= 5:
+            chosen = rng.sample(pool, k=5)
+        else:
+            chosen = pool  # fallback if fewer than 5 questions are available
 
-        # FIXED OPTION ORDER: a, b, c, d (no shuffle)
         for q in chosen:
-            # items in dict are already a,b,c,d, but sort to be safe
             items = list(q["options"].items())
-            items.sort(key=lambda kv: kv[0])   # ensure a<b<c<d
+            items.sort(key=lambda kv: kv[0])  # consistent option order a-d
             q["options_shuffled"] = items
 
-        grouped[key] = {"text": PASSAGES[key], "questions": chosen}
+        grouped[passage_key] = {
+            "text": PASSAGES.get(passage_key, ""),
+            "questions": chosen,
+            "title": PASSAGE_TITLES.get(passage_key, passage_key.title())
+        }
 
-    return grouped
+    return {
+        "difficulty": difficulty,
+        "blocks": grouped
+    }

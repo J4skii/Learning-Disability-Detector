@@ -39,7 +39,7 @@
 
         <!-- Enhanced test cards with modern design and better accessibility -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <a href="/test/dyslexia" 
+            <a href="{{ url_for('test_dyslexia') }}" 
                class="group bg-white dark:bg-gray-800 rounded-2xl shadow-xl hover:shadow-2xl border border-gray-100 dark:border-gray-700 p-8 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                role="button"
                aria-label="Take Dyslexia Test">
@@ -50,9 +50,16 @@
                 <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
                     Assess reading and language processing abilities with specialized exercises.
                 </p>
+                <div class="mt-6 flex flex-wrap gap-2">
+                    {% for level in ['easy', 'medium', 'hard'] %}
+                    <a href="{{ url_for('test_dyslexia', difficulty=level) }}" class="px-3 py-1 text-xs font-semibold rounded-full border border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                        {{ level.title() }}
+                    </a>
+                    {% endfor %}
+                </div>
             </a>
 
-            <a href="/test/dyscalculia" 
+            <a href="{{ url_for('test_dyscalculia') }}" 
                class="group bg-white dark:bg-gray-800 rounded-2xl shadow-xl hover:shadow-2xl border border-gray-100 dark:border-gray-700 p-8 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/20"
                role="button"
                aria-label="Take Dyscalculia Test">
@@ -63,9 +70,16 @@
                 <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
                     Evaluate mathematical reasoning and number processing skills.
                 </p>
+                <div class="mt-6 flex flex-wrap gap-2">
+                    {% for level in ['easy', 'medium', 'hard'] %}
+                    <a href="{{ url_for('test_dyscalculia', difficulty=level) }}" class="px-3 py-1 text-xs font-semibold rounded-full border border-green-200 dark:border-green-700 text-green-600 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30">
+                        {{ level.title() }}
+                    </a>
+                    {% endfor %}
+                </div>
             </a>
 
-            <a href="/test/memory" 
+            <a href="{{ url_for('test_memory') }}" 
                class="group bg-white dark:bg-gray-800 rounded-2xl shadow-xl hover:shadow-2xl border border-gray-100 dark:border-gray-700 p-8 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/20"
                role="button"
                aria-label="Take Memory Test">
@@ -76,6 +90,13 @@
                 <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
                     Test working memory and cognitive processing capabilities.
                 </p>
+                <div class="mt-6 flex flex-wrap gap-2">
+                    {% for level in ['easy', 'medium', 'hard'] %}
+                    <a href="{{ url_for('test_memory', difficulty=level) }}" class="px-3 py-1 text-xs font-semibold rounded-full border border-purple-200 dark:border-purple-700 text-purple-600 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30">
+                        {{ level.title() }}
+                    </a>
+                    {% endfor %}
+                </div>
             </a>
         </div>
 

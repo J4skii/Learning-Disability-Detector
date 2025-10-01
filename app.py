@@ -3,7 +3,7 @@ import os
 from io import BytesIO
 
 # Third-party imports
-from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash
+from flask import Flask, render_template, request, send_file, redirect, url_for, session, flash, abort
 from flask_mail import Mail, Message
 from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer
@@ -38,6 +38,43 @@ migrate = Migrate(app, db)
 
 # Initialize serializer
 serializer = URLSafeTimedSerializer(app.secret_key)
+
+DIFFICULTY_LEVELS = ("easy", "medium", "hard")
+
+
+def _normalize_difficulty(difficulty: str) -> str:
+    """Return a sanitized difficulty value or abort if unsupported."""
+    normalized = (difficulty or "medium").lower()
+    if normalized not in DIFFICULTY_LEVELS:
+        abort(404)
+    return normalized
+
+
+def _ensure_test_user():
+    """Ensure the current user is logged in and has completed prerequisites."""
+    user = db.session.get(User, session.get('user_id'))
+    if not user:
+        session.clear()
+        flash('Session expired. Please log in again.')
+        return None, redirect(url_for('login'))
+
+    if not user.completed_get_to_know_you:
+        flash('Please complete the "Get to Know You" assessment first.')
+        return user, redirect(url_for('landing'))
+
+    return user, None
+
+
+def _render_level_unavailable(template_name: str, *, difficulty: str, user, **context):
+    """Render a placeholder page when a difficulty level is not yet available."""
+    payload = {
+        'user': user,
+        'difficulty': difficulty,
+        'difficulties': DIFFICULTY_LEVELS,
+        'available': False,
+    }
+    payload.update(context)
+    return render_template(template_name, **payload)
 
 # Login required decorator
 def login_required(f):
@@ -452,24 +489,26 @@ def get_to_know_you():
         print(f"Get to know you error: {e}")
         flash('An error occurred. Please try again.')
         return redirect(url_for('landing'))
-from comprehension_questions import get_random_questions as get_comprehension_test
+# Difficulty-aware question sourcing
+from comprehension_questions import get_questions_for_difficulty
 
-@app.route('/test/comprehension', methods=['GET', 'POST'])
+@app.route('/test/comprehension', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/comprehension/<difficulty>', methods=['GET', 'POST'])
 @login_required
-def test_comprehension():
+def test_comprehension(difficulty):
     try:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            session.clear()
-            flash("Session expired. Please log in again.")
-            return redirect(url_for('login'))
+        user, redirect_resp = _ensure_test_user()
+        if redirect_resp:
+            return redirect_resp
 
-        # Always generate the test set (so both GET and POST use the same sampled questions)
-        test_set = get_comprehension_test()
+        difficulty = _normalize_difficulty(difficulty)
+
+        test_data = get_questions_for_difficulty(difficulty)
+        blocks = test_data["blocks"]
 
         # Flatten the 15 chosen questions into a lookup dict
         chosen_questions = []
-        for block in test_set.values():
+        for block in blocks.values():
             chosen_questions.extend(block["questions"])
         chosen_map = {q["id"]: q for q in chosen_questions}
 
@@ -478,32 +517,47 @@ def test_comprehension():
             total = 0
 
             for key, value in request.form.items():
-                if key.startswith("q"):  # e.g., q1, q2
-                    total += 1
-                    qid = int(key[1:])
-                    question = chosen_map.get(qid)
-                    if question and value == question["answer"]:
-                        score += 1
+                if not key.startswith("q"):
+                    continue
+
+                key_suffix = key[1:]
+                if not key_suffix.isdigit():
+                    continue
+
+                total += 1
+                qid = int(key_suffix)
+                question = chosen_map.get(qid)
+                if question and value == question["answer"]:
+                    score += 1
+
+            if total == 0:
+                flash('No questions available for this difficulty yet. Please try another level.')
+                return redirect(url_for('test_comprehension', difficulty=difficulty))
 
             message = f"You scored {score}/{total}."
             save_result(
                 user.name,
                 user.email,
-                "Comprehension",
+                f"Comprehension ({difficulty.title()})",
                 score,
                 score < total // 2,
                 message
             )
 
             return render_template("results.html", result={
-                "type": "Comprehension",
+                "type": f"Comprehension ({difficulty.title()})",
                 "score": score,
                 "flag": score < total // 2,
                 "message": message
             })
 
         # GET: render the comprehension test page
-        return render_template("test_comprehension.html", questions=test_set, user=user)
+        return render_template(
+            "test_comprehension.html",
+            test_data=test_data,
+            user=user,
+            difficulties=DIFFICULTY_LEVELS
+        )
 
     except Exception as e:
         print(f"Comprehension test error: {e}")
@@ -511,115 +565,148 @@ def test_comprehension():
         return redirect(url_for('landing'))
 
 
-@app.route('/test/dyslexia', methods=['GET', 'POST'])
+@app.route('/test/dyslexia', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/dyslexia/<difficulty>', methods=['GET', 'POST'])
 @login_required
-def test_dyslexia():
+def test_dyslexia(difficulty):
     try:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            session.clear()
-            flash('Session expired. Please log in again.')
-            return redirect(url_for('login'))
+        user, redirect_resp = _ensure_test_user()
+        if redirect_resp:
+            return redirect_resp
 
-        if not user.completed_get_to_know_you:
-            flash('Please complete the "Get to Know You" assessment first.')
-            return redirect(url_for('landing'))
+        difficulty = _normalize_difficulty(difficulty)
+        available = difficulty == 'medium'
+
+        if not available:
+            if request.method == 'POST':
+                flash('This difficulty level is coming soon. Please select Medium for the current assessment.')
+                return redirect(url_for('test_dyslexia', difficulty=difficulty))
+            return _render_level_unavailable('test_dyslexia.html', difficulty=difficulty, user=user)
 
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
-            answers = [request.form.get(f'q{i}') for i in range(1,6)]
+            answers = [request.form.get(f'q{i}') for i in range(1, 6)]
 
-            # Validate inputs
             if not name or not email:
                 flash('Name and email are required.')
-                return redirect(url_for('test_dyslexia'))
+                return redirect(url_for('test_dyslexia', difficulty=difficulty))
 
             if not all(answers):
                 flash('Please answer all questions.')
-                return redirect(url_for('test_dyslexia'))
+                return redirect(url_for('test_dyslexia', difficulty=difficulty))
 
             result = evaluate_dyslexia(answers)
-            save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
-            return render_template('results.html', result=result)
+            result_payload = dict(result)
+            result_payload['type'] = f"{result['type']} ({difficulty.title()})"
+            save_result(name, email, result_payload['type'], result['score'], result['flag'], result['message'])
+            return render_template('results.html', result=result_payload)
 
-        return render_template('test_dyslexia.html')
+        return render_template(
+            'test_dyslexia.html',
+            user=user,
+            difficulty=difficulty,
+            difficulties=DIFFICULTY_LEVELS,
+            available=True
+        )
     except Exception as e:
         print(f"Dyslexia test error: {e}")
         flash('An error occurred during the test. Please try again.')
         return redirect(url_for('landing'))
 
-@app.route('/test/dyscalculia', methods=['GET', 'POST'])
+@app.route('/test/dyscalculia', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/dyscalculia/<difficulty>', methods=['GET', 'POST'])
 @login_required
-def test_dyscalculia():
+def test_dyscalculia(difficulty):
     try:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            session.clear()
-            flash('Session expired. Please log in again.')
-            return redirect(url_for('login'))
+        user, redirect_resp = _ensure_test_user()
+        if redirect_resp:
+            return redirect_resp
 
-        if not user.completed_get_to_know_you:
-            flash('Please complete the "Get to Know You" assessment first.')
-            return redirect(url_for('landing'))
+        difficulty = _normalize_difficulty(difficulty)
+        available = difficulty == 'medium'
+
+        if not available:
+            if request.method == 'POST':
+                flash('This difficulty level is coming soon. Please select Medium for the current assessment.')
+                return redirect(url_for('test_dyscalculia', difficulty=difficulty))
+            return _render_level_unavailable('test_dyscalculia.html', difficulty=difficulty, user=user)
 
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
-            answers = [request.form.get(f'q{i}') for i in range(1,6)]
+            answers = [request.form.get(f'q{i}') for i in range(1, 6)]
 
-            # Validate inputs
             if not name or not email:
                 flash('Name and email are required.')
-                return redirect(url_for('test_dyscalculia'))
+                return redirect(url_for('test_dyscalculia', difficulty=difficulty))
 
             if not all(answers):
                 flash('Please answer all questions.')
-                return redirect(url_for('test_dyscalculia'))
+                return redirect(url_for('test_dyscalculia', difficulty=difficulty))
 
             result = evaluate_dyscalculia(answers)
-            save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
-            return render_template('results.html', result=result)
+            result_payload = dict(result)
+            result_payload['type'] = f"{result['type']} ({difficulty.title()})"
+            save_result(name, email, result_payload['type'], result['score'], result['flag'], result['message'])
+            return render_template('results.html', result=result_payload)
 
-        return render_template('test_dyscalculia.html')
+        return render_template(
+            'test_dyscalculia.html',
+            user=user,
+            difficulty=difficulty,
+            difficulties=DIFFICULTY_LEVELS,
+            available=True
+        )
     except Exception as e:
         print(f"Dyscalculia test error: {e}")
         flash('An error occurred during the test. Please try again.')
         return redirect(url_for('landing'))
 
-@app.route('/test/memory', methods=['GET', 'POST'])
+@app.route('/test/memory', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/memory/<difficulty>', methods=['GET', 'POST'])
 @login_required
-def test_memory():
+def test_memory(difficulty):
     try:
-        user = db.session.get(User, session['user_id'])
-        if not user:
-            session.clear()
-            flash('Session expired. Please log in again.')
-            return redirect(url_for('login'))
+        user, redirect_resp = _ensure_test_user()
+        if redirect_resp:
+            return redirect_resp
 
-        if not user.completed_get_to_know_you:
-            flash('Please complete the "Get to Know You" assessment first.')
-            return redirect(url_for('landing'))
+        difficulty = _normalize_difficulty(difficulty)
+        available = difficulty == 'medium'
+
+        if not available:
+            if request.method == 'POST':
+                flash('This difficulty level is coming soon. Please select Medium for the current assessment.')
+                return redirect(url_for('test_memory', difficulty=difficulty))
+            return _render_level_unavailable('test_memory.html', difficulty=difficulty, user=user)
 
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
             answers = request.form.getlist('recall')
 
-            # Validate inputs
             if not name or not email:
                 flash('Name and email are required.')
-                return redirect(url_for('test_memory'))
+                return redirect(url_for('test_memory', difficulty=difficulty))
 
             if not answers:
                 flash('Please provide recall answers.')
-                return redirect(url_for('test_memory'))
+                return redirect(url_for('test_memory', difficulty=difficulty))
 
             result = evaluate_memory(answers)
-            save_result(name, email, result['type'], result['score'], result['flag'], result['message'])
-            return render_template('results.html', result=result)
+            result_payload = dict(result)
+            result_payload['type'] = f"{result['type']} ({difficulty.title()})"
+            save_result(name, email, result_payload['type'], result_payload['score'], result_payload['flag'], result_payload['message'])
+            return render_template('results.html', result=result_payload)
 
-        return render_template('test_memory.html')
+        return render_template(
+            'test_memory.html',
+            user=user,
+            difficulty=difficulty,
+            difficulties=DIFFICULTY_LEVELS,
+            available=True
+        )
     except Exception as e:
         print(f"Memory test error: {e}")
         flash('An error occurred during the test. Please try again.')
@@ -677,9 +764,10 @@ LD Detector Team
 
     return render_template('forgot_password.html')
 
-@app.route('/test/flash_cards', methods=['GET', 'POST'])
+@app.route('/test/flash_cards', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/flash_cards/<difficulty>', methods=['GET', 'POST'])
 @login_required
-def test_flash_cards():
+def test_flash_cards(difficulty):
     try:
         user = db.session.get(User, session['user_id'])
         if not user:
@@ -691,6 +779,18 @@ def test_flash_cards():
             flash('Please complete the "Get to Know You" assessment first.')
             return redirect(url_for('landing'))
 
+        difficulty = (difficulty or 'medium').lower()
+        if difficulty not in DIFFICULTY_LEVELS:
+            abort(404)
+
+        available = difficulty == 'medium'
+
+        if not available:
+            if request.method == 'POST':
+                flash('This difficulty level is coming soon. Please select Medium for the current assessment.')
+                return redirect(url_for('test_flash_cards', difficulty=difficulty))
+            return render_template('test_flash_cards.html', difficulty=difficulty, difficulties=DIFFICULTY_LEVELS, available=False)
+
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
@@ -699,11 +799,11 @@ def test_flash_cards():
             # Validate inputs
             if not name or not email:
                 flash('Name and email are required.')
-                return redirect(url_for('test_flash_cards'))
+                return redirect(url_for('test_flash_cards', difficulty=difficulty))
 
             if not all(answers):
                 flash('Please answer all questions.')
-                return redirect(url_for('test_flash_cards'))
+                return redirect(url_for('test_flash_cards', difficulty=difficulty))
 
             # Simple evaluation for flash cards (count correct answers)
             correct_answers = ['cat', 'apple', 'book', 'house', 'sun']
@@ -713,16 +813,16 @@ def test_flash_cards():
             flag = score < 3  # Flag if less than 3 correct
             message = f"You correctly identified {score} out of 5 flash card items."
 
-            save_result(name, email, 'Flash Cards', score, flag, message)
+            save_result(name, email, f'Flash Cards ({difficulty.title()})', score, flag, message)
             result = {
-                'type': 'Flash Cards',
+                'type': f'Flash Cards ({difficulty.title()})',
                 'score': score,
                 'flag': flag,
                 'message': message
             }
             return render_template('results.html', result=result)
 
-        return render_template('test_flash_cards.html')
+        return render_template('test_flash_cards.html', difficulty=difficulty, difficulties=DIFFICULTY_LEVELS, available=True)
     except Exception as e:
         print(f"Flash cards test error: {e}")
         flash('An error occurred during the test. Please try again.')
