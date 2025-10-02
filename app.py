@@ -11,7 +11,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Local imports
 from models import db, User, Test, Remedial, save_result, get_filtered_results, export_results_to_csv, create_hardcoded_users
-from ld_logic import evaluate_dyslexia, evaluate_dyscalculia, evaluate_memory
+from ld_logic import (
+    evaluate_dyslexia,
+    evaluate_dyscalculia,
+    evaluate_memory,
+    evaluate_phonetics,
+    evaluate_phonetics_legacy_mcq,
+)
+from sqlalchemy import or_
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -48,6 +55,49 @@ def _normalize_difficulty(difficulty: str) -> str:
     if normalized not in DIFFICULTY_LEVELS:
         abort(404)
     return normalized
+
+
+def _required_base_tests():
+    """Return the canonical set of test categories we require for completion."""
+    return ("comprehension", "memory", "phonetics")
+
+
+def _normalize_test_to_base(test_type):
+    """Map stored Result.test_type strings to our base categories."""
+    if not test_type:
+        return None
+    t = str(test_type).lower()
+    if t.startswith('comprehension'):
+        return 'comprehension'
+    if t.startswith('working memory'):
+        return 'memory'
+    # Our Phonetics assessment currently stores as 'Dyscalculia (...)'
+    if t.startswith('dyscalculia') or t.startswith('phonetics'):
+        return 'phonetics'
+    return None
+
+
+def _get_completed_base_tests(user):
+    """Return a set of base tests the user has completed based on Result rows."""
+    try:
+        from models import Result
+        rows = Result.query.filter_by(email=user.email).all()
+        done = set()
+        for r in rows:
+            base = _normalize_test_to_base(getattr(r, 'test_type', ''))
+            if base:
+                done.add(base)
+        return done
+    except Exception:
+        return set()
+
+
+def _get_progress(user):
+    """Compute completion progress for required tests."""
+    done = _get_completed_base_tests(user)
+    total = len(_required_base_tests())
+    pct = int(round((len(done) * 100) / total)) if total else 0
+    return done, total, pct
 
 
 def _ensure_test_user():
@@ -544,12 +594,16 @@ def test_comprehension(difficulty):
                 message
             )
 
-            return render_template("results.html", result={
-                "type": f"Comprehension ({difficulty.title()})",
-                "score": score,
-                "flag": score < total // 2,
-                "message": message
-            })
+            # Counselors/Admins see inline results; Students are redirected to gated summary
+            if user.role in ['admin', 'superuser', 'counselor']:
+                return render_template("results.html", result={
+                    "type": f"Comprehension ({difficulty.title()})",
+                    "score": score,
+                    "total": total,
+                    "flag": score < total // 2,
+                    "message": message
+                })
+            return redirect(url_for('student_results'))
 
         # GET: render the comprehension test page
         return render_template(
@@ -586,6 +640,7 @@ def test_dyslexia(difficulty):
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
+            runtime = (request.form.get('runtime', '') or '').strip()
             answers = [request.form.get(f'q{i}') for i in range(1, 6)]
 
             if not name or not email:
@@ -600,7 +655,10 @@ def test_dyslexia(difficulty):
             result_payload = dict(result)
             result_payload['type'] = f"{result['type']} ({difficulty.title()})"
             save_result(name, email, result_payload['type'], result['score'], result['flag'], result['message'])
-            return render_template('results.html', result=result_payload)
+            # Show inline results for staff; gate students
+            if user.role in ['admin', 'superuser', 'counselor']:
+                return render_template('results.html', result=result_payload)
+            return redirect(url_for('student_results'))
 
         return render_template(
             'test_dyslexia.html',
@@ -635,21 +693,24 @@ def test_dyscalculia(difficulty):
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
-            answers = [request.form.get(f'q{i}') for i in range(1, 6)]
+            answers = request.form.getlist('answer')
+            targets = request.form.getlist('target')
 
             if not name or not email:
                 flash('Name and email are required.')
                 return redirect(url_for('test_dyscalculia', difficulty=difficulty))
 
-            if not all(answers):
-                flash('Please answer all questions.')
+            if not answers or not targets or len(answers) != len(targets) or not all((a or '').strip() for a in answers):
+                flash('Please complete all items before submitting.')
                 return redirect(url_for('test_dyscalculia', difficulty=difficulty))
 
-            result = evaluate_dyscalculia(answers)
+            result = evaluate_dyscalculia(answers, targets)
             result_payload = dict(result)
             result_payload['type'] = f"{result['type']} ({difficulty.title()})"
             save_result(name, email, result_payload['type'], result['score'], result['flag'], result['message'])
-            return render_template('results.html', result=result_payload)
+            if user.role in ['admin', 'superuser', 'counselor']:
+                return render_template('results.html', result=result_payload)
+            return redirect(url_for('student_results'))
 
         return render_template(
             'test_dyscalculia.html',
@@ -685,20 +746,31 @@ def test_memory(difficulty):
             name = request.form.get('name', '').strip()
             email = request.form.get('email', '').strip().lower()
             answers = request.form.getlist('recall')
+            targets = request.form.getlist('target')
+            runtime = (request.form.get('runtime', '') or '').strip()
 
             if not name or not email:
                 flash('Name and email are required.')
                 return redirect(url_for('test_memory', difficulty=difficulty))
 
-            if not answers:
+            if not answers or not targets:
                 flash('Please provide recall answers.')
                 return redirect(url_for('test_memory', difficulty=difficulty))
 
-            result = evaluate_memory(answers)
+            result = evaluate_memory(answers, targets)
             result_payload = dict(result)
             result_payload['type'] = f"{result['type']} ({difficulty.title()})"
+            # Append runtime if provided
+            try:
+                if runtime:
+                    secs = int(float(runtime))
+                    result_payload['message'] = f"{result_payload.get('message','')} Time taken: {secs}s"
+            except Exception:
+                pass
             save_result(name, email, result_payload['type'], result_payload['score'], result_payload['flag'], result_payload['message'])
-            return render_template('results.html', result=result_payload)
+            if user.role in ['admin', 'superuser', 'counselor']:
+                return render_template('results.html', result=result_payload)
+            return redirect(url_for('student_results'))
 
         return render_template(
             'test_memory.html',
@@ -709,6 +781,75 @@ def test_memory(difficulty):
         )
     except Exception as e:
         print(f"Memory test error: {e}")
+        flash('An error occurred during the test. Please try again.')
+        return redirect(url_for('landing'))
+
+@app.route('/test/phonetics', defaults={'difficulty': 'medium'}, methods=['GET', 'POST'])
+@app.route('/test/phonetics/<difficulty>', methods=['GET', 'POST'])
+@login_required
+def test_phonetics(difficulty):
+    try:
+        user, redirect_resp = _ensure_test_user()
+        if redirect_resp:
+            return redirect_resp
+
+        difficulty = _normalize_difficulty(difficulty)
+        available = difficulty == 'medium'
+
+        if not available:
+            if request.method == 'POST':
+                flash('This difficulty level is coming soon. Please select Medium for the current assessment.')
+                return redirect(url_for('test_phonetics', difficulty=difficulty))
+            return _render_level_unavailable('test_phonetics_spelling.html', difficulty=difficulty, user=user)
+
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip().lower()
+
+            if not name or not email:
+                flash('Name and email are required.')
+                return redirect(url_for('test_phonetics', difficulty=difficulty))
+
+            # New typed inputs
+            spells = request.form.getlist('spell')
+            targets = request.form.getlist('target')
+            levels = request.form.getlist('level')
+
+            result = None
+            if spells and targets:
+                result = evaluate_phonetics(spells, targets, levels)
+            else:
+                # Legacy 5-item MCQ fallback (e.g., q1..q5)
+                legacy_answers = [request.form.get(f'q{i}') for i in range(1, 6)]
+                if any(legacy_answers):
+                    result = evaluate_phonetics_legacy_mcq(legacy_answers)
+                else:
+                    flash('Please complete all items before submitting.')
+                    return redirect(url_for('test_phonetics', difficulty=difficulty))
+
+            result_payload = dict(result)
+            result_payload['type'] = f"Phonetics ({difficulty.title()})"
+            # Append runtime if provided
+            try:
+                if runtime:
+                    secs = int(float(runtime))
+                    result_payload['message'] = f"{result_payload.get('message','')} Time taken: {secs}s"
+            except Exception:
+                pass
+            save_result(name, email, result_payload['type'], result_payload.get('score', 0), result_payload.get('flag', False), result_payload.get('message', ''))
+            if user.role in ['admin', 'superuser', 'counselor']:
+                return render_template('results.html', result=result_payload)
+            return redirect(url_for('student_results'))
+
+        return render_template(
+            'test_phonetics_spelling.html',
+            user=user,
+            difficulty=difficulty,
+            difficulties=DIFFICULTY_LEVELS,
+            available=True
+        )
+    except Exception as e:
+        print(f"Phonetics test error: {e}")
         flash('An error occurred during the test. Please try again.')
         return redirect(url_for('landing'))
 
@@ -891,12 +1032,212 @@ def admin_dashboard():
 def assessments():
     try:
         user = db.session.get(User, session['user_id'])
-        return render_template('assessments.html', user=user)
+        completed_set, total_tests, progress_pct = _get_progress(user)
+        completed_count = len(completed_set)
+        return render_template(
+            'assessments.html',
+            user=user,
+            completed_tests=completed_set,
+            completed_count=completed_count,
+            total_tests=total_tests,
+            progress_pct=progress_pct
+        )
     except Exception as e:
         print(f"Assessments page error: {e}")
         flash('An error occurred loading the assessments page.')
         return redirect(url_for('index'))
 
+@app.route('/results')
+@login_required
+def student_results():
+    """Aggregate results for the current user. Students are gated until all tests complete."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        completed_set, total_tests, progress_pct = _get_progress(user)
+
+        # Gate students until all required tests are done
+        if user.role not in ['admin', 'superuser', 'counselor'] and len(completed_set) < total_tests:
+            flash('Please complete all tests to view results')
+            return redirect(url_for('assessments'))
+
+        # Fetch the latest result per base category
+        from models import Result
+        def latest_like(prefix):
+            return (Result.query
+                    .filter(Result.email == user.email, Result.test_type.ilike(f"{prefix}%"))
+                    .order_by(Result.timestamp.desc())
+                    .first())
+
+        comprehension_row = latest_like('Comprehension (')
+        memory_row = latest_like('Working Memory (')
+        # Support legacy Dyscalculia label and new Phonetics label
+        from models import Result
+        phonetics_row = (Result.query
+                         .filter(
+                             Result.email == user.email,
+                             or_(
+                                 Result.test_type.ilike('Dyscalculia (%'),
+                                 Result.test_type.ilike('Phonetics (%')
+                             )
+                         )
+                         .order_by(Result.timestamp.desc())
+                         .first())
+
+        # Attach totals so summary can show correct denominators
+        # Comprehension: try parse from saved message 'You scored X/Y.'; fallback to question bank size
+        if comprehension_row and getattr(comprehension_row, 'test_type', None):
+            try:
+                msg = (getattr(comprehension_row, 'message', '') or '').strip()
+                total_from_msg = None
+                slash = msg.rfind('/')
+                if slash != -1:
+                    # read digits after '/'
+                    j = slash + 1
+                    digits = ''
+                    while j < len(msg) and msg[j].isdigit():
+                        digits += msg[j]
+                        j += 1
+                    if digits:
+                        total_from_msg = int(digits)
+                if total_from_msg:
+                    setattr(comprehension_row, 'total', total_from_msg)
+                else:
+                    # Fallback: infer from question bank by difficulty label
+                    label = comprehension_row.test_type
+                    diff = label[label.find('(')+1:label.find(')')].strip().lower()
+                    from comprehension_questions import get_questions_for_difficulty
+                    td = get_questions_for_difficulty(diff)
+                    blocks = td.get('blocks', {})
+                    comp_total = 0
+                    for b in blocks.values():
+                        comp_total += len(b.get('questions', []))
+                    setattr(comprehension_row, 'total', comp_total if comp_total else 5)
+            except Exception:
+                pass
+        if memory_row:
+            try:
+                setattr(memory_row, 'total', 12)
+            except Exception:
+                pass
+        if phonetics_row:
+            try:
+                setattr(phonetics_row, 'total', 9)
+            except Exception:
+                pass
+
+        summary_results = [r for r in (comprehension_row, memory_row, phonetics_row) if r]
+
+        # Students should not see timing; sanitize 'Time taken: Ns' from messages
+        try:
+            if user.role not in ['admin', 'superuser', 'counselor']:
+                for r in summary_results:
+                    msg = (getattr(r, 'message', '') or '')
+                    cut = msg.find('Time taken:')
+                    if cut != -1:
+                        setattr(r, 'message', msg[:cut].strip())
+        except Exception:
+            pass
+
+        return render_template(
+            'results.html',
+            user=user,
+            summary_results=summary_results,
+            progress_pct=progress_pct,
+            completed_count=len(completed_set),
+            total_tests=total_tests
+        )
+    except Exception as e:
+        print(f"Student results error: {e}")
+        flash('An error occurred loading your results.')
+        return redirect(url_for('assessments'))
+
+@app.route('/programs')
+@login_required
+def programs():
+    """Personalized programs page, unlocked after completing all base tests for students."""
+    try:
+        user = db.session.get(User, session['user_id'])
+        completed_set, total_tests, progress_pct = _get_progress(user)
+
+        # Gate students until all required tests are done; staff bypass
+        if user.role not in ['admin', 'superuser', 'counselor'] and len(completed_set) < total_tests:
+            flash('Please complete all tests to unlock personalized programs')
+            return redirect(url_for('assessments'))
+
+        from models import Result
+        def latest_like(prefix):
+            return (Result.query
+                    .filter(Result.email == user.email, Result.test_type.ilike(f"{prefix}%"))
+                    .order_by(Result.timestamp.desc())
+                    .first())
+
+        comprehension_row = latest_like('Comprehension (')
+        memory_row = latest_like('Working Memory (')
+        # Support legacy Dyscalculia label and new Phonetics label
+        phonetics_row = (Result.query
+                         .filter(
+                             Result.email == user.email,
+                             or_(
+                                 Result.test_type.ilike('Dyscalculia (%'),
+                                 Result.test_type.ilike('Phonetics (%')
+                             )
+                         )
+                         .order_by(Result.timestamp.desc())
+                         .first())
+
+        # Attach totals
+        if comprehension_row and getattr(comprehension_row, 'test_type', None):
+            try:
+                label = comprehension_row.test_type
+                diff = label[label.find('(')+1:label.find(')')].strip().lower()
+                from comprehension_questions import get_questions_for_difficulty
+                td = get_questions_for_difficulty(diff)
+                blocks = td.get('blocks', {})
+                comp_total = 0
+                for b in blocks.values():
+                    comp_total += len(b.get('questions', []))
+                setattr(comprehension_row, 'total', comp_total if comp_total else 5)
+            except Exception:
+                pass
+        if memory_row:
+            try:
+                setattr(memory_row, 'total', 12)
+            except Exception:
+                pass
+        if phonetics_row:
+            try:
+                setattr(phonetics_row, 'total', 9)
+            except Exception:
+                pass
+
+        # Students should not see timing on programs; sanitize 'Time taken: Ns'
+        try:
+            if user.role not in ['admin', 'superuser', 'counselor']:
+                for r in (comprehension_row, memory_row, phonetics_row):
+                    if not r:
+                        continue
+                    msg = (getattr(r, 'message', '') or '')
+                    cut = msg.find('Time taken:')
+                    if cut != -1:
+                        setattr(r, 'message', msg[:cut].strip())
+        except Exception:
+            pass
+
+        return render_template(
+            'programs.html',
+            user=user,
+            comprehension=comprehension_row,
+            memory=memory_row,
+            phonetics=phonetics_row,
+            progress_pct=progress_pct,
+            completed_count=len(completed_set),
+            total_tests=total_tests,
+            phonetics_max=9
+        )
+    except Exception as e:
+        print(f"Programs page error: {e}")
+        flash('An error occurred loading your programs.')
+        return redirect(url_for('assessments'))
 @app.route('/counselor')
 @counselor_required
 def counselor_dashboard():
